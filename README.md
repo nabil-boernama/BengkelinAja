@@ -15,7 +15,7 @@ Proyek Akhir mata kuliah Pengembangan Aplikasi Web (TIF213146), DTETI FT UGM.
 | _Muhammad Nabil Fitriansyah Boernama_ | _24/545232/TK/60628_ | fondasi, auth, model, middleware |
 | _(isi nama)_ | _(isi NIM)_ | pelanggan & order |
 | _(isi nama)_ | _(isi NIM)_ | suku cadang & laporan |
-| _(isi nama)_ | _(isi NIM)_ | struk, notifikasi, publik |
+| _Putri Tajudin_ | _24/535824/TK/59469_ | struk, notifikasi, publik |
 
 ## Teknologi yang Digunakan
 
