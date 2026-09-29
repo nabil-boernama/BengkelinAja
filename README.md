@@ -13,44 +13,9 @@ Proyek Akhir mata kuliah Pengembangan Aplikasi Web (TIF213146), DTETI FT UGM.
 | Nama | NIM | Peran di Backend |
 |---|---|---|
 | _Muhammad Nabil Fitriansyah Boernama_ | _24/545232/TK/60628_ | fondasi, auth, model, middleware |
-| _(isi nama)_ | _(isi NIM)_ | pelanggan & order |
-| _(isi nama)_ | _(isi NIM)_ | suku cadang & laporan |
-| _Putri Tajudin_ | _24/535824/TK/59469_ | struk, notifikasi, publik |
-
-## Teknologi yang Digunakan
-
-| Package | Peran |
-|---|---|
-| `express` | HTTP server dan routing |
-| `mongoose` | ODM MongoDB (schema + validasi) |
-| `jsonwebtoken` | Autentikasi berbasis token (JWT) |
-| `bcryptjs` | Hashing password |
-| `zod` | Validasi dan sanitasi input |
-| `cors` | Mengizinkan request lintas origin (untuk frontend) |
-| `helmet` | Header keamanan HTTP dasar |
-| `morgan` | Logging request saat development |
-| `express-rate-limit` | Pembatas percobaan login dan endpoint publik (`/track`) |
-| `pdfkit` | Membuat struk servis dalam bentuk PDF |
-| `dotenv` | Memuat variabel `.env` |
-| `nodemon` *(dev)* | Auto-restart saat development |
-
-Database: **MongoDB** (disarankan MongoDB Atlas, karena fitur transaksi butuh replica set).
-
-## Menjalankan
-
-```bash
-npm install
-cp .env.example .env      # isi MONGODB_URI & JWT_SECRET
-npm run seed              # buat akun admin, budi, andi (mekanik), owner
-npm run dev
-```
-
-Cek server hidup: `GET http://localhost:3000/health`
-
-> Transaksi MongoDB (pencatatan suku cadang + pengurangan stok, `PUT /orders/:id/service`)
-> **butuh replica set**. Termudah: MongoDB Atlas (free tier sudah replica set), tempel
-> connection string-nya di `MONGODB_URI`. Kalau mau lokal: jalankan `mongod --replSet rs0`,
-> lalu sekali di mongosh: `rs.initiate()`.
+| _nama_ | _nim_ | pelanggan & order |
+| _Bintang Khalifa Hadianto_ | _24/534951/TK/59312_ | suku cadang & laporan |
+| _(isi nama)_ | _(isi NIM)_ | struk, notifikasi, publik |
 
 ## Struktur Folder dan File
 
@@ -84,6 +49,25 @@ laju-jaya-backend/
 │   └── utils/                 # AppError, asyncHandler, date (dateKey untuk no antrean)
 ```
 
+## Teknologi yang Digunakan
+
+| Package | Peran |
+|---|---|
+| `express` | HTTP server dan routing |
+| `mongoose` | ODM MongoDB (schema + validasi) |
+| `jsonwebtoken` | Autentikasi berbasis token (JWT) |
+| `bcryptjs` | Hashing password |
+| `zod` | Validasi dan sanitasi input |
+| `cors` | Mengizinkan request lintas origin (untuk frontend) |
+| `helmet` | Header keamanan HTTP dasar |
+| `morgan` | Logging request saat development |
+| `express-rate-limit` | Pembatas percobaan login dan endpoint publik (`/track`) |
+| `pdfkit` | Membuat struk servis dalam bentuk PDF |
+| `dotenv` | Memuat variabel `.env` |
+| `nodemon` *(dev)* | Auto-restart saat development |
+
+Database: **MongoDB** 
+
 ## Daftar Endpoint
 
 Base URL: `http://localhost:3000/api`. Semua endpoint (kecuali login dan `/track`) butuh
@@ -109,23 +93,6 @@ header `Authorization: Bearer <token>`.
 | GET | `/orders/:id/receipt` | Unduh struk servis (PDF) | Admin |
 | GET | `/orders/:id/notify-link` | Tautan WhatsApp siap kirim ke pelanggan | Admin |
 | GET | `/track?no_antrean=&plat=` | Cek status servis tanpa login | Publik |
-
-## Kepemilikan File
-
-| Area | Pemilik |
-|---|---|
-| `src/config`, `src/models`, `src/middleware`, `src/utils`, `src/routes`, `src/seeders`, `src/modules/auth` | Anggota 1 |
-| `src/modules/customers`, `src/modules/orders` (kecuali `notify.routes.js`) | Anggota 2 |
-| `src/modules/parts`, `src/modules/reports` | Anggota 3 |
-| `src/modules/receipts`, `src/modules/tracking`, `src/modules/orders/notify.routes.js` | Anggota 4 |
-
-Aturan: jangan edit file milik anggota lain. Butuh perubahan di model/middleware? Ajukan lewat
-PR kecil ke Anggota 1.
-
-## Alur Git
-
-Branch: `feature/<modul>`, merge ke `develop` lewat Pull Request.
-Commit: `<modul>: <apa yang dikerjakan>` — contoh `orders: tambah PATCH status`.
 
 ## Laporan
 
