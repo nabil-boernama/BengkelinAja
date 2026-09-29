@@ -13,9 +13,9 @@ Proyek Akhir mata kuliah Pengembangan Aplikasi Web (TIF213146), DTETI FT UGM.
 | Nama | NIM | Peran di Backend |
 |---|---|---|
 | _Muhammad Nabil Fitriansyah Boernama_ | _24/545232/TK/60628_ | fondasi, auth, model, middleware |
-| _nama_ | _nim_ | pelanggan & order |
+| _Zakhrova Salsabila_ | _24/534625/TK/59268_ | pelanggan & order |
 | _Bintang Khalifa Hadianto_ | _24/534951/TK/59312_ | suku cadang & laporan |
-| _(isi nama)_ | _(isi NIM)_ | struk, notifikasi, publik |
+| _Putri Tajudin_ | _24/545232/TK/60628_ | struk, notifikasi, publik |
 
 ## Struktur Folder dan File
 
