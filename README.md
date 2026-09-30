@@ -15,7 +15,7 @@ Proyek Akhir mata kuliah Pengembangan Aplikasi Web (TIF213146), DTETI FT UGM.
 | _Muhammad Nabil Fitriansyah Boernama_ | _24/545232/TK/60628_ | fondasi, auth, model, middleware |
 | _Zakhrova Salsabila_ | _24/534625/TK/59268_ | pelanggan & order |
 | _Bintang Khalifa Hadianto_ | _24/534951/TK/59312_ | suku cadang & laporan |
-| _Putri Tajudin_ | _24/545232/TK/60628_ | struk, notifikasi, publik |
+| _Putri Tajudin_ | _24/535824/TK/59469_ | struk, notifikasi, publik |
 
 ## Struktur Folder dan File
 
