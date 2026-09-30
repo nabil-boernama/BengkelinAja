@@ -97,5 +97,4 @@ header `Authorization: Bearer <token>`.
 ## Laporan
 
 Laporan PDF (analisis kebutuhan, analisis fitur, daftar API, hasil pemanggilan API via
-Postman): <!-- TODO: tempel URL Google Drive di sini, pastikan izin akses "siapa saja yang
-punya link" --> _(isi URL GDrive)_
+Postman):  _https://drive.google.com/drive/folders/1BVq1ukSe8JshY3xhNFIL0UMRkIr1My79?usp=share_link_
