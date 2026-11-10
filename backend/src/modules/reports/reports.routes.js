@@ -1,35 +1,47 @@
 const router = require('express').Router();
 const { authenticate, authorize } = require('../../middleware/auth');
 const Order = require('../../models/Order');
+const OrderItem = require('../../models/OrderItem');
 const Part = require('../../models/Part');
 
-const tanggalKeyFilter = (period) => {
-  const now = new Date();
+// WIB = UTC+7 (tanpa daylight saving). Kita hitung awal periode berdasarkan tanggal di WIB,
+// supaya hasilnya sama di laptop maupun di server yang berjam UTC.
+const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
+
+const startOfPeriodWIB = (period) => {
+  // Geser jam sekarang ke WIB, lalu baca tanggalnya dengan getUTC*
+  const nowWIB = new Date(Date.now() + WIB_OFFSET_MS);
+  const y = nowWIB.getUTCFullYear();
+  const m = nowWIB.getUTCMonth();
+  const d = nowWIB.getUTCDate();
+
   let start;
   if (period === 'daily') {
-    start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    start = Date.UTC(y, m, d);
   } else if (period === 'weekly') {
-    const day = now.getDay();
-    start = new Date(now);
-    start.setDate(now.getDate() - day);
-    start.setHours(0, 0, 0, 0);
+    start = Date.UTC(y, m, d - nowWIB.getUTCDay()); // mulai hari Minggu
   } else {
-    start = new Date(now.getFullYear(), now.getMonth(), 1);
+    start = Date.UTC(y, m, 1);
   }
-  return start;
+  // Kembalikan ke waktu sebenarnya (kurangi 7 jam)
+  return new Date(start - WIB_OFFSET_MS);
 };
 
-router.get('/dashboard', authenticate, authorize('Admin', 'Owner'), async (req, res, next) => {
+router.get('/dashboard', authenticate, authorize('Owner'), async (req, res, next) => {
   try {
     const period = req.query.period || 'monthly';
-    const start = tanggalKeyFilter(period);
+    const start = startOfPeriodWIB(period);
 
     const orders = await Order.find({
       status: 'Diambil',
       updatedAt: { $gte: start },
     }).lean();
 
-    const totalPendapatan = orders.reduce((sum, o) => sum + (o.total_harga || 0), 0);
+    // Pendapatan = biaya jasa + (jumlah x harga) semua suku cadang di order yang sudah diambil
+    const items = await OrderItem.find({ order: { $in: orders.map((o) => o._id) } }).lean();
+    const totalSukuCadang = items.reduce((sum, it) => sum + it.jumlah * it.harga_satuan, 0);
+    const totalJasa = orders.reduce((sum, o) => sum + (o.biaya_jasa || 0), 0);
+    const totalPendapatan = totalJasa + totalSukuCadang;
     const totalOrder = orders.length;
 
     const parts = await Part.find().lean();
