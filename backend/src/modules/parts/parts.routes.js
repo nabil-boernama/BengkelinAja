@@ -1,7 +1,11 @@
 const router = require('express').Router();
+const { authenticate, authorize } = require('../../middleware/auth');
+const controller = require('./parts.controller');
+const validate = require('../../middleware/validate');
+const { createPartSchema, updatePartSchema, objectIdParamSchema } = require('./parts.validation');
 
-// TODO (Anggota 3): GET/POST /parts, PATCH /parts/:id
-// Sudah di-mount di src/routes/index.js, cukup tambahkan route di file ini.
-// Pakai: const { authenticate, authorize } = require('../../middleware/auth');
+router.get('/', authenticate, authorize('Admin', 'Owner'), controller.list);
+router.post('/', authenticate, authorize('Admin'), validate(createPartSchema), controller.create);
+router.patch('/:id', authenticate, authorize('Admin'), validate(objectIdParamSchema, 'params'), validate(updatePartSchema), controller.update);
 
 module.exports = router;
