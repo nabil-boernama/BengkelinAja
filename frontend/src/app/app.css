@@ -18,6 +18,7 @@ h1.pt{font-family:"Russo One";font-weight:400;text-transform:uppercase;font-size
 .in,select.in,textarea.in{width:100%;height:56px;border:0;border-radius:20px;background:#1E2427;color:#fff;padding:0 20px;font:inherit;font-size:16px;box-shadow:inset 4px 5px 10px rgba(0,0,0,.35),inset -2px -2px 6px rgba(255,255,255,.04);outline:0}
 textarea.in{height:auto;padding:16px 20px;min-height:120px;resize:vertical}
 .in:focus{box-shadow:inset 4px 5px 10px rgba(0,0,0,.35),0 0 0 2px #fff}.in::placeholder{color:#7C8990}
+.in::-webkit-search-cancel-button{filter:invert(1);cursor:pointer;transform:scale(1.5)}
 select.in{appearance:none;background-image:linear-gradient(45deg,transparent 50%,#B8C2C7 50%),linear-gradient(135deg,#B8C2C7 50%,transparent 50%);background-position:calc(100% - 24px) 24px,calc(100% - 18px) 24px;background-size:6px 6px;background-repeat:no-repeat;padding-right:44px}
 .help{font-size:13px;color:var(--mist);margin-top:6px}.err{font-size:13px;color:#FF9D99;margin-top:6px;font-weight:600;display:none}.err.on{display:block}
 .ermsg{display:none;align-items:center;gap:10px;color:#FF9D99;font-weight:700;margin:4px 0 16px}.ermsg.on{display:flex}.ermsg svg{width:20px;height:20px;flex:0 0 auto}
@@ -47,7 +48,7 @@ select.in{appearance:none;background-image:linear-gradient(45deg,transparent 50%
 /* shell staf */
 .shell{position:relative;z-index:2;display:grid;grid-template-columns:260px 1fr;gap:20px;padding:16px;min-height:100vh}
 .side{position:sticky;top:16px;height:calc(100vh - 32px);background:#12171A;border-radius:32px;padding:24px 16px;display:flex;flex-direction:column;box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 24px 48px rgba(0,0,0,.4)}
-.side .logo{padding:0 10px 24px}.side .logo img{height:32px}
+.side .logo{padding:0 10px 24px}.side .logo img{width:100%;height:auto}
 .side nav{display:flex;flex-direction:column;gap:6px}
 .side nav a{display:flex;justify-content:space-between;align-items:center;padding:13px 18px;border-radius:999px;font-weight:700;font-size:15px;color:rgba(255,255,255,.8);transition:transform .18s}
 .side nav a:hover{transform:translateX(3px);color:#fff}.side nav a.on{background:var(--s7);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}

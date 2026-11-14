@@ -75,10 +75,11 @@ const create = asyncHandler(async (req, res) => {
 
 // GET /orders?status=&plat=: daftar order (FR-12). Mekanik hanya lihat order miliknya.
 const list = asyncHandler(async (req, res) => {
-  const { status, plat } = req.query;
+  const { status, plat, tanggal } = req.query;
   const filter = {};
   if (status) filter.status = status;
-  if (plat) filter.plat = String(plat).replace(/\s+/g, '').toUpperCase();
+  if (plat) filter.plat = { $regex: String(plat).replace(/\s+/g, ''), $options: 'i' };
+  if (tanggal) filter.tanggal_key = tanggal;
   if (req.user.peran === ROLES.MEKANIK) filter.mekanik = req.user._id;
 
   const orders = await Order.find(filter)

@@ -39,16 +39,18 @@ function OrdersContent() {
 
   const [status, setStatus] = useState("");
   const [platInput, setPlatInput] = useState("");
-  const plat = useDebounce(platInput.trim(), 400);
+  const [tanggalInput, setTanggalInput] = useState("");
+  const tanggal = useDebounce(tanggalInput, 400);
+  const plat = useDebounce(platInput.trim().toUpperCase(), 400);
 
   const fetcher = useCallback(async () => {
-    const items = await getOrders({ status, plat });
+    const items = await getOrders({ status, plat, tanggal });
     return { items: Array.isArray(items) ? items : [], at: new Date() };
-  }, [status, plat]);
+  }, [status, plat, tanggal]);
   const { data, error, loading, refresh } = usePolling(fetcher, POLL_MS);
 
   const orders = data?.items ?? [];
-  const hasFilter = Boolean(status || plat);
+  const hasFilter = Boolean(status || plat || tanggal);
   const cols = showMekanik ? 8 : 7;
 
   let body;
@@ -64,7 +66,7 @@ function OrdersContent() {
         </td>
         <td data-l="Tanggal">{formatTanggalPendek(o.tanggal)}</td>
         <td data-l="Plat">
-          <b>{o.plat || "-"}</b>
+          <b>{o.plat ? o.plat.replace(/^([A-Z]{1,3})(\d+)([A-Z]{1,3})$/, '$1 $2 $3') : "-"}</b>
         </td>
         <td data-l="Pelanggan">{o.customer?.nama || "-"}</td>
         <td className="trunc" data-l="Keluhan" title={o.keluhan}>
@@ -116,6 +118,13 @@ function OrdersContent() {
           maxLength={15}
           value={platInput}
           onChange={(e) => setPlatInput(e.target.value)}
+        />
+        <input
+          className="in"
+          type="date"
+          aria-label="Filter tanggal"
+          value={tanggalInput}
+          onChange={(e) => setTanggalInput(e.target.value)}
         />
         <div className="stamp">
           {data?.at && <span>Diperbarui {jamFmt.format(data.at).replace(/:/g, ".")}</span>}
