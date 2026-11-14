@@ -10,6 +10,7 @@ import PageBackground from "@/components/layout/PageBackground";
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/orders", label: "Order", mekanikLabel: "Order Saya" },
+  { href: "/orders/new", label: "Order Baru" },
   { href: "/customers", label: "Riwayat" },
   { href: "/parts", label: "Stok" },
 ];
@@ -26,7 +27,11 @@ export default function StaffLayout({ children }) {
   const items = NAV_ITEMS.filter((item) => canAccess(role, item.href)).map((item) => ({
     ...item,
     text: role === "mekanik" && item.mekanikLabel ? item.mekanikLabel : item.label,
-    active: pathname === item.href || pathname.startsWith(`${item.href}/`),
+    // "/orders" tidak aktif saat di "/orders/new" (dicek exact atau sub-path non-new)
+    active:
+      item.href === "/orders"
+        ? pathname === "/orders" || (pathname.startsWith("/orders/") && pathname !== "/orders/new" && !pathname.startsWith("/orders/new/"))
+        : pathname === item.href || pathname.startsWith(`${item.href}/`),
   }));
 
   const name = user?.nama || user?.username || "";
