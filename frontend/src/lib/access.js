@@ -3,7 +3,7 @@
 export const ROUTE_ACCESS = {
   "/orders": ["admin", "mekanik", "owner"], // Owner: hanya lihat
   "/orders/new": ["admin"],                 // Order Baru: hanya admin
-  "/customers": ["admin", "owner"],
+  "/customers": ["admin", "mekanik", "owner"],
   "/parts": ["admin", "owner"],
   "/dashboard": ["owner"],
 };
