@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import StaffLayout from "@/components/layout/StaffLayout";
 import { getDashboard, REPORT_PERIODS } from "@/services/reportsService";
 import { formatRupiah } from "@/lib/format";
 
@@ -78,7 +79,7 @@ export default function DashboardPage() {
     1
   );
 
-  return (
+  const content = (
     <div>
       <div className="row sp" style={{ marginBottom: 24 }}>
         <h1
@@ -225,4 +226,6 @@ export default function DashboardPage() {
       {/* TODO: Tambahkan jumlah order aktif per status setelah API laporan menyediakannya. */}
     </div>
   );
+
+  return <StaffLayout>{content}</StaffLayout>;
 }
