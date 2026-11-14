@@ -1,18 +1,21 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect } from "react";
+import ScrollTopOnLoad from "@/components/landing/ScrollTopOnLoad";
+import ServicesCarousel from "@/components/landing/ServicesCarousel";
 
 const WA_URL = "https://wa.me/6281371846810";
 
 const LAYANAN = [
-  ["01", "Servis Berkala", "01-servis-berkala.jpg"],
-  ["02", "Ganti Oli", "02-ganti-oli.jpg"],
-  ["03", "Servis Mesin", "03-servis-mesin.jpg"],
-  ["04", "Servis Rem", "04-servis-rem.jpg"],
-  ["05", "Servis Kelistrikan", "05-servis-kelistrikan.jpg"],
-  ["06", "Servis Ban dan Roda", "06-servis-ban-dan-roda.jpg"],
-  ["07", "Servis CVT dan Transmisi", "07-servis-cvt-dan-transmisi.jpg"],
-  ["08", "Servis Suspensi", "08-servis-suspensi.jpg"],
-  ["09", "Tune Up Motor", "09-tune-up-motor.jpg"],
-  ["10", "Penggantian Suku Cadang", "10-penggantian-suku-cadang.jpg"],
+  ["Ganti Aki", "ganti-aki.jpg"],
+  ["Servis Berkala", "servis-berkala.jpg"],
+  ["Servis CVT dan Transmisi", "servis-cvt-dan-transmisi.jpg"],
+  ["Servis Kelistrikan", "servis-kelistrikan.jpg"],
+  ["Servis Mesin", "servis-mesin.jpg"],
+  ["Servis Rem", "servis-rem.jpg"],
+  ["Servis Suspensi", "servis-suspensi.jpg"],
+  ["Tune Up Motor", "tune-up-motor.jpg"],
 ];
 
 const TESTIMONI_1 = [
@@ -66,8 +69,23 @@ function TestimoniTrack({ items, className }) {
 }
 
 export default function LandingPage() {
+  useEffect(() => {
+    const els = document.querySelectorAll(".reveal");
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) e.target.classList.add("visible");
+        });
+      },
+      { threshold: 0.15 }
+    );
+    els.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <>
+      <ScrollTopOnLoad />
       <div className="pgbg" aria-hidden="true">
         <i className="a" />
         <i className="b" />
@@ -78,11 +96,10 @@ export default function LandingPage() {
       <section className="hero" id="home">
         <div className="hov" />
         <div className="hin">
-          <span className="lab">Laju Jaya &middot; Mode Reguler</span>
-          <h1>Servis motor jadi jelas.</h1>
+          <h1>Motor Bermasalah?<br />BengkelinAja!</h1>
           <p className="lead">
-            Pantau motor Anda dari antre sampai siap diambil. Lihat rincian suku cadang dan biaya jasa, tanpa perlu
-            menelepon bengkel.
+            Nikmati kemudahan dalam memenuhi kebutuhan servis dan perawatan motormu. Bersama BengkelinAja, rawat motor
+            jadi lebih praktis dan nyaman.
           </p>
           <div className="hbtn">
             <Link className="b b-r big" href="/cek-status">
@@ -91,17 +108,26 @@ export default function LandingPage() {
             </Link>
           </div>
           <div className="strip">
-            <div>
-              <span className="lab">Jam buka</span>
-              <b>Senin sampai Sabtu</b>
-            </div>
-            <div>
-              <span className="lab">Waktu</span>
-              <b>08.00 sampai 17.00</b>
-            </div>
-            <div>
-              <span className="lab">Layanan</span>
-              <b>Servis, ganti oli, suku cadang, dan lainnya</b>
+            <div className="ops">
+              <span className="lab">JAM OPERASIONAL</span>
+              <b className="ops-day">Senin &ndash; Sabtu</b>
+              <span className="ops-time">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  width="16"
+                  height="16"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 7v5l3 3" />
+                </svg>
+                08.00 &ndash; 17.00 WIB
+              </span>
             </div>
           </div>
         </div>
@@ -134,30 +160,22 @@ export default function LandingPage() {
 
         <section className="sec" id="mengapa">
           <div className="ct">
-            <h2 className="st">Why Choose Us</h2>
+            <h2 className="st reveal">Why Choose Us</h2>
             <div className="wrow">
-              <div className="wc c-s">
-                <div className="n">01</div>
+              <div className="wc c-s reveal reveal-delay-1">
                 <h3>Convenience</h3>
-                <div className="t">Cek status tanpa telepon.</div>
-                <p>
-                  Masukkan nomor antrean dan plat nomor. Status motor Anda tampil seketika, dari Antre sampai Selesai.
-                </p>
+                <div className="t">Cek status tanpa telepon</div>
+                <p>Pantau proses servis motormu kapan saja, mulai dari antre hingga selesai</p>
               </div>
-              <div className="wc c-r">
-                <div className="n">02</div>
+              <div className="wc c-r reveal reveal-delay-2">
                 <h3>Transparency</h3>
-                <div className="t">Status yang jelas.</div>
-                <p>Pantau tiap tahap servis dari Antre sampai Diambil, jadi Anda tahu motor sudah sampai mana.</p>
+                <div className="t">Rincian biaya yang jelas</div>
+                <p>Ketahui rincian biaya jasa dan suku cadang secara transparan</p>
               </div>
-              <div className="wc c-m">
-                <div className="n">03</div>
-                <h3>Reliability</h3>
-                <div className="t">Bergaransi 3 bulan.</div>
-                <p>
-                  Setiap perbaikan bergaransi, dan stok suku cadang dipantau agar pengerjaan tidak tertahan menunggu
-                  barang.
-                </p>
+              <div className="wc c-m reveal reveal-delay-3">
+                <h3>Quality</h3>
+                <div className="t">Pengerjaan dengan teliti</div>
+                <p>Setiap motor ditangani dengan cermat dan mengutamakan kualitas</p>
               </div>
             </div>
           </div>
@@ -165,22 +183,10 @@ export default function LandingPage() {
 
         <section className="sec" id="layanan">
           <div className="ct">
-            <h2 className="st">Our Services</h2>
+            <h2 className="st reveal">Our Services</h2>
           </div>
-          <div className="marq">
-            <div className="mtrack slow">
-              {[...LAYANAN, ...LAYANAN].map(([no, nama, img], i) => (
-                <article key={i} className="sc" aria-hidden={i >= LAYANAN.length || undefined}>
-                  <img src={`/img/${img}`} alt="" />
-                  <div className="cap">
-                    <span>{no}</span>
-                    <h3>{nama}</h3>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-          <div className="ct cta">
+          <ServicesCarousel items={LAYANAN} />
+          <div className="ct cta reveal">
             <a
               className="b b-r big"
               href={`${WA_URL}?text=${encodeURIComponent("Halo Laju Jaya, saya ingin konsultasi servis motor.")}`}
@@ -198,9 +204,9 @@ export default function LandingPage() {
 
         <section className="sec" id="testimoni">
           <div className="ct">
-            <h2 className="st">Testimonials</h2>
+            <h2 className="st reveal">Testimonials</h2>
           </div>
-          <div className="marq">
+          <div className="marq marq-t">
             <TestimoniTrack items={TESTIMONI_1} className="mtrack" />
             <TestimoniTrack items={TESTIMONI_2} className="mtrack rev" />
           </div>
@@ -209,12 +215,12 @@ export default function LandingPage() {
         <section className="sec stats" id="statistik">
           <div className="ct">
             <div className="srow">
-              <div className="sb sb-s">
+              <div className="sb sb-s reveal reveal-delay-1">
                 <i className="tick" />
                 <div className="v">8</div>
                 <div className="l">Tahun menemani perjalanan</div>
               </div>
-              <div className="sb sb-r">
+              <div className="sb sb-r reveal reveal-delay-2">
                 <i className="halo" />
                 <i className="ring r1" />
                 <i className="ring r2" />
@@ -222,7 +228,7 @@ export default function LandingPage() {
                 <div className="v">1.200+</div>
                 <div className="l">Motor dirawat</div>
               </div>
-              <div className="sb sb-p">
+              <div className="sb sb-p reveal reveal-delay-3">
                 <i className="tick" />
                 <div className="v">98%</div>
                 <div className="l">Pelanggan puas</div>
@@ -234,8 +240,8 @@ export default function LandingPage() {
         <section className="sec" id="kontak">
           <div className="ct">
             <div className="cg">
-              <div className="cl">
-                <span className="lab2">KONTAK</span>
+              <div className="cl reveal reveal-delay-1">
+                <span className="lab2">CONTACT</span>
                 <h2>
                   GET IN
                   <br />
@@ -278,35 +284,26 @@ export default function LandingPage() {
                   </span>
                 </a>
               </div>
-              <div className="cm">
+              <div className="cm reveal reveal-delay-2">
                 <div className="mapbg" />
                 <iframe
-                  title="Peta lokasi"
+                  title="Peta lokasi Fakultas Teknik UGM"
                   loading="lazy"
-                  src="https://www.openstreetmap.org/export/embed.html?bbox=110.3600%2C-7.7760%2C110.3860%2C-7.7600&layer=mapnik"
+                  src="https://www.openstreetmap.org/export/embed.html?bbox=110.3700%2C-7.7695%2C110.3780%2C-7.7625&layer=mapnik&marker=-7.7660%2C110.3740"
                 />
-                <div className="mi">
-                  <b>Laju Jaya, Fakultas Teknik UGM, Jl. Grafika No. 2, Yogyakarta 55281</b>
-                  <span>Senin sampai Sabtu, 08.00 sampai 17.00 WIB</span>
-                </div>
+                <a
+                  className="mi"
+                  href="https://www.google.com/maps/search/?api=1&query=Fakultas+Teknik+Universitas+Gadjah+Mada"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <b>Fakultas Teknik UGM, Jl. Grafika No. 2, Yogyakarta 55281</b>
+                  <span>Senin &ndash; Sabtu<br />08.00 &ndash; 17.00 WIB</span>
+                </a>
               </div>
             </div>
           </div>
         </section>
-
-        <footer className="foot">
-          <div className="ct">
-            <img src="/logo.png" alt="BengkelinAja" />
-            <nav>
-              <a href="#mengapa">Mengapa kami</a>
-              <a href="#layanan">Layanan</a>
-              <a href="#testimoni">Testimoni</a>
-              <a href="#kontak">Kontak</a>
-              <Link href="/cek-status">Cek Status</Link>
-            </nav>
-            <p>&copy; 2026 BengkelinAja. Dibuat untuk Laju Jaya.</p>
-          </div>
-        </footer>
       </div>
     </>
   );
