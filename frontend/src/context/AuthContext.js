@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import * as authService from "@/services/authService";
 import {
+  ApiError,
   clearToken,
   getToken,
   setToken,
@@ -56,6 +57,10 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (username, password) => {
     const data = await authService.login(username, password);
+    // jaga-jaga bila format respons berubah: jangan simpan token kosong
+    if (!data?.token || !data?.user) {
+      throw new ApiError("Respons login tidak valid dari server.", 500);
+    }
     setToken(data.token);
     setUser(data.user);
     setSessionExpired(false);

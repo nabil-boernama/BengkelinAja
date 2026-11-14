@@ -1,13 +1,20 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+// Semua route backend berada di bawah prefix /api
+const BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api").replace(/\/+$/, "");
 const TOKEN_KEY = "ba_token";
 
 // Galat standar: semua halaman cukup menangkap ApiError
 export class ApiError extends Error {
-  constructor(message, status, retryAfter = null) {
+  constructor(message, status, { retryAfter = null, errors = [] } = {}) {
     super(message);
     this.name = "ApiError";
     this.status = status; // 0 = server tidak terjangkau
     this.retryAfter = retryAfter; // detik, untuk 429
+    this.errors = errors; // [{ field, message }] dari validasi backend (400)
+  }
+
+  // pesan galat untuk satu field form, mis. err.fieldError("username")
+  fieldError(field) {
+    return this.errors.find((e) => e.field === field)?.message || null;
   }
 }
 
@@ -63,17 +70,25 @@ async function request(path, { method = "GET", body, auth = true, raw = false } 
 
   if (!res.ok) {
     let message = "Terjadi kesalahan. Coba lagi.";
+    let errors = [];
     try {
       const data = await res.json();
       message = data.message || data.error || message;
+      if (Array.isArray(data.errors)) errors = data.errors;
     } catch {}
     const retryAfter = Number(res.headers.get("Retry-After")) || null;
-    throw new ApiError(message, res.status, retryAfter);
+    throw new ApiError(message, res.status, { retryAfter, errors });
   }
 
   if (raw) return res; // dipakai untuk unduhan PDF
   if (res.status === 204) return null;
-  return res.json();
+
+  // backend membungkus respons sukses: { success, data, message? } -> kembalikan isi data
+  const json = await res.json();
+  if (json && typeof json === "object" && "success" in json) {
+    return json.data !== undefined ? json.data : null;
+  }
+  return json;
 }
 
 // ----- jalan pintas yang dipakai services/ -----
