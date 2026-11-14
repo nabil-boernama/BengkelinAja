@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef } from "react";
 
 /**
- * Modal konfirmasi. Memakai kelas .dlg dari components.css.
+ * Modal konfirmasi. Memakai kelas .dlg.on dari app.css.
  *
  * <Dialog
  *   open={confirmOpen}
@@ -87,7 +87,7 @@ export default function Dialog({
 
   return (
     <div
-      className="dlg"
+      className="dlg on"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget && !loading) onCancel?.();
       }}

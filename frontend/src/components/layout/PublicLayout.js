@@ -1,21 +1,29 @@
 import Link from "next/link";
-import PageBackground from "@/components/layout/PageBackground";
-import styles from "./PublicLayout.module.css";
 
-// Kerangka halaman publik (pelanggan): navbar dengan logo dan link ke /track.
+// Navbar publik (landing, login, cek status). Navbar .nav bersifat fixed;
+// tiap halaman mengatur jarak atasnya sendiri (mis. .pub atau .hero).
 export default function PublicLayout({ children }) {
   return (
-    <div className={styles.root}>
-      <PageBackground />
-      <header className={styles.nav}>
-        <Link href="/" className={styles.logo} aria-label="BengkelinAja, ke beranda">
-          Bengkelin<span>Aja</span>
+    <>
+      <header className="nav">
+        <Link className="logo" href="/">
+          <img src="/logo.png" alt="BengkelinAja" />
         </Link>
-        <Link href="/track" className="b b-p sm">
-          Lacak Servis
-        </Link>
+        <nav>
+          <Link href="#">Layanan</Link>
+          <Link href="#">Tentang Kami</Link>
+          <Link href="#">Kontak</Link>
+        </nav>
+        <div className="navr">
+          <Link href="/cek-status" className="b b-s">
+            Cek Status
+          </Link>
+          <Link href="/login" className="b b-r">
+            Masuk Staf
+          </Link>
+        </div>
       </header>
-      <main className={styles.main}>{children}</main>
-    </div>
+      {children}
+    </>
   );
 }

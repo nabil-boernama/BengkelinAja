@@ -1,53 +1,5 @@
-:root {
-  --ink: #090b0c;
-  --nb: #0e1112;
-  --char: #222222;
-  --s8: #283237;
-  --s7: #323c40;
-  --red: #d52b27;
-  --mist: #b8c2c7;
-  --paper: #f3f4f5;
-  --warn: #ffd27a;
-  --err: #ff9d99;
-}
+@import './v7.css';
+@import './app.css';
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-}
-
-html {
-  scroll-behavior: smooth;
-}
-
-body {
-  background: var(--ink);
-  color: #fff;
-  font-family: var(--font-body), system-ui, sans-serif;
-  line-height: 1.6;
-  overflow-x: hidden;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-img {
-  display: block;
-  max-width: 100%;
-}
-
-.font-display {
-  font-family: var(--font-display), sans-serif;
-  font-weight: 400;
-  text-transform: uppercase;
-}
-
-.muted {
-  color: var(--mist);
-}
-
-.small {
-  font-size: 13px;
-}
+/* v7.css tidak mereset gaya bawaan <button>: tanpa ini tombol .b memakai border dan font bawaan browser */
+button.b { border: 0; font-family: inherit; }
