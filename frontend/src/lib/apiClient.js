@@ -1,13 +1,20 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+// Semua route backend berada di bawah prefix /api
+const BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api").replace(/\/+$/, "");
 const TOKEN_KEY = "ba_token";
 
 // Galat standar: semua halaman cukup menangkap ApiError
 export class ApiError extends Error {
-  constructor(message, status, retryAfter = null) {
+  constructor(message, status, { retryAfter = null, errors = [] } = {}) {
     super(message);
     this.name = "ApiError";
     this.status = status; // 0 = server tidak terjangkau
     this.retryAfter = retryAfter; // detik, untuk 429
+    this.errors = errors; // [{ field, message }] dari validasi backend (400)
+  }
+
+  // pesan galat untuk satu field form, mis. err.fieldError("username")
+  fieldError(field) {
+    return this.errors.find((e) => e.field === field)?.message || null;
   }
 }
 
@@ -36,8 +43,20 @@ export function setUnauthorizedHandler(fn) {
   onUnauthorized = fn;
 }
 
+// { status: "Antre", plat: "" } -> "?status=Antre" (nilai kosong dilewati)
+function buildQuery(query) {
+  if (!query) return "";
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value === undefined || value === null || value === "") continue;
+    params.append(key, String(value));
+  }
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+}
+
 // ----- fungsi dasar -----
-async function request(path, { method = "GET", body, auth = true, raw = false } = {}) {
+async function request(path, { method = "GET", body, query, auth = true, raw = false } = {}) {
   const headers = {};
   if (body !== undefined) headers["Content-Type"] = "application/json";
 
@@ -46,7 +65,7 @@ async function request(path, { method = "GET", body, auth = true, raw = false } 
 
   let res;
   try {
-    res = await fetch(`${BASE_URL}${path}`, {
+    res = await fetch(`${BASE_URL}${path}${buildQuery(query)}`, {
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -63,17 +82,25 @@ async function request(path, { method = "GET", body, auth = true, raw = false } 
 
   if (!res.ok) {
     let message = "Terjadi kesalahan. Coba lagi.";
+    let errors = [];
     try {
       const data = await res.json();
       message = data.message || data.error || message;
+      if (Array.isArray(data.errors)) errors = data.errors;
     } catch {}
     const retryAfter = Number(res.headers.get("Retry-After")) || null;
-    throw new ApiError(message, res.status, retryAfter);
+    throw new ApiError(message, res.status, { retryAfter, errors });
   }
 
   if (raw) return res; // dipakai untuk unduhan PDF
   if (res.status === 204) return null;
-  return res.json();
+
+  // backend membungkus respons sukses: { success, data, message? } -> kembalikan isi data
+  const json = await res.json();
+  if (json && typeof json === "object" && "success" in json) {
+    return json.data !== undefined ? json.data : null;
+  }
+  return json;
 }
 
 // ----- jalan pintas yang dipakai services/ -----
