@@ -1,6 +1,7 @@
 import { Plus_Jakarta_Sans, Russo_One } from "next/font/google";
 import "./globals.css";
 import "../styles/components.css";
+import { AuthProvider } from "@/context/AuthContext";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -22,7 +23,9 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="id" className={`${jakarta.variable} ${russo.variable}`}>
-      <body>{children}</body>
+      <body>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }
