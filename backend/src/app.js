@@ -7,8 +7,23 @@ const { notFound, errorHandler } = require("./middleware/errorHandler");
 
 const app = express();
 
+// Percaya header dari reverse proxy (Render, Railway, dsb.)
+// supaya rate limiter membaca IP asli, bukan IP proxy.
+app.set("trust proxy", 1);
+
 app.use(helmet());
-app.use(cors());
+
+const allowedOrigins = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(",").map((s) => s.trim())
+  : true; // development: izinkan semua
+
+app.use(
+  cors({
+    origin: allowedOrigins,
+    exposedHeaders: ["RateLimit-Limit", "RateLimit-Remaining", "RateLimit-Reset", "Retry-After"],
+  })
+);
+
 app.use(express.json({ limit: "100kb" }));
 if (process.env.NODE_ENV !== "test") app.use(morgan("dev"));
 

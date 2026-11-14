@@ -24,7 +24,7 @@ const orderSchema = new Schema(
       default: ORDER_STATUS.ANTRE,
     },
     biaya_jasa: { type: Number, default: 0, min: 0 },
-        biaya_jasa: { type: Number, default: 0, min: 0 },
+    
     // Diisi saat order dibatalkan (hanya lewat endpoint cancel)
     alasan_batal: { type: String, trim: true, maxlength: 300 },
     dibatalkan_pada: { type: Date },

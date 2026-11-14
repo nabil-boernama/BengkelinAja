@@ -6,7 +6,8 @@ const { authenticate, authorize } = require('../../middleware/auth');
 const { ROLES, ORDER_STATUS } = require('../../constants');
 
 // GET /mechanics/workload — jumlah order aktif tiap mekanik, untuk membantu Admin
-// memilih mekanik saat membuat order (mendukung FR-02, menghindari motor menumpuk)
+// memilih mekanik saat membuat order (mendukung FR-02, menghindari motor menumpuk).
+// Order Dibatalkan, Selesai, dan Diambil tidak dihitung sebagai beban aktif.
 router.get(
   '/workload',
   authenticate,
@@ -17,7 +18,13 @@ router.get(
       .lean();
 
     const counts = await Order.aggregate([
-      { $match: { status: { $nin: [ORDER_STATUS.SELESAI, ORDER_STATUS.DIAMBIL] } } },
+      {
+        $match: {
+          status: {
+            $nin: [ORDER_STATUS.SELESAI, ORDER_STATUS.DIAMBIL, ORDER_STATUS.DIBATALKAN],
+          },
+        },
+      },
       { $group: { _id: '$mekanik', total: { $sum: 1 } } },
     ]);
     const countByMekanik = Object.fromEntries(counts.map((c) => [String(c._id), c.total]));

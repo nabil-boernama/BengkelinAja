@@ -16,6 +16,15 @@ const MEKANIK_SEQUENCE = [
 // Status akhir: order tidak boleh diubah lagi
 const FINAL_STATUS = [ORDER_STATUS.DIAMBIL, ORDER_STATUS.DIBATALKAN];
 
+// Sembunyikan sebagian nomor WA untuk Mekanik.
+// Contoh: "08123456789" -> "0812****89"
+const maskWA = (wa) => {
+  if (!wa) return null;
+  const s = String(wa);
+  if (s.length <= 6) return '*'.repeat(s.length);
+  return s.slice(0, 4) + '*'.repeat(s.length - 6) + s.slice(-2);
+};
+
 // POST /orders: buat order servis baru (FR-02)
 const create = asyncHandler(async (req, res) => {
   const { customer: customerInput, plat, keluhan, mekanik: mekanikId } = req.body;
@@ -78,7 +87,18 @@ const list = asyncHandler(async (req, res) => {
     .populate('mekanik', 'nama')
     .lean();
 
-  res.json({ success: true, data: orders });
+  // Mekanik hanya boleh lihat sebagian nomor WA pelanggan
+  const data =
+    req.user.peran === ROLES.MEKANIK
+      ? orders.map((o) => ({
+          ...o,
+          customer: o.customer
+            ? { ...o.customer, no_wa: maskWA(o.customer.no_wa) }
+            : o.customer,
+        }))
+      : orders;
+
+  res.json({ success: true, data });
 });
 
 // GET /orders/:id: detail order, rincian suku cadang, dan total biaya (FR-07)
@@ -91,6 +111,11 @@ const detail = asyncHandler(async (req, res) => {
 
   if (req.user.peran === ROLES.MEKANIK && String(order.mekanik._id) !== String(req.user._id)) {
     throw new AppError('Anda tidak punya akses ke order ini', 403);
+  }
+
+  // Mekanik hanya boleh lihat sebagian nomor WA pelanggan
+  if (req.user.peran === ROLES.MEKANIK && order.customer) {
+    order.customer = { ...order.customer, no_wa: maskWA(order.customer.no_wa) };
   }
 
   const items = await OrderItem.find({ order: order._id }).populate('part', 'nama').lean();
