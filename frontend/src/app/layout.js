@@ -1,5 +1,6 @@
 import { Plus_Jakarta_Sans, Russo_One } from "next/font/google";
 import "./globals.css";
+import "../styles/components.css";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
