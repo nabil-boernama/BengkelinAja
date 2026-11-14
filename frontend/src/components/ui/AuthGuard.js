@@ -63,7 +63,7 @@ export default function AuthGuard({ roles, children }) {
     return (
       <FullScreen>
         <div className="pn" style={{ maxWidth: 480, width: "100%", textAlign: "center" }}>
-          <p className="font-display" style={{ fontSize: 64, lineHeight: 1, color: "var(--red)" }}>
+          <p className="big404" style={{ color: "var(--red)" }}>
             403
           </p>
           <h1 style={{ fontSize: 24, fontWeight: 800, margin: "12px 0 8px" }}>Akses ditolak</h1>
