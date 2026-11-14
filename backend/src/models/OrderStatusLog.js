@@ -7,6 +7,8 @@ const orderStatusLogSchema = new Schema({
   order: { type: Schema.Types.ObjectId, ref: 'Order', required: true },
   status_baru: { type: String, enum: Object.values(ORDER_STATUS), required: true },
   diubah_oleh: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  // Opsional: alasan untuk pembatalan atau pengembalian status
+  alasan: { type: String, trim: true, maxlength: 300 },
   waktu: { type: Date, default: Date.now },
 });
 
