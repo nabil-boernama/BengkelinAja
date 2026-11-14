@@ -43,8 +43,20 @@ export function setUnauthorizedHandler(fn) {
   onUnauthorized = fn;
 }
 
+// { status: "Antre", plat: "" } -> "?status=Antre" (nilai kosong dilewati)
+function buildQuery(query) {
+  if (!query) return "";
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value === undefined || value === null || value === "") continue;
+    params.append(key, String(value));
+  }
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+}
+
 // ----- fungsi dasar -----
-async function request(path, { method = "GET", body, auth = true, raw = false } = {}) {
+async function request(path, { method = "GET", body, query, auth = true, raw = false } = {}) {
   const headers = {};
   if (body !== undefined) headers["Content-Type"] = "application/json";
 
@@ -53,7 +65,7 @@ async function request(path, { method = "GET", body, auth = true, raw = false } 
 
   let res;
   try {
-    res = await fetch(`${BASE_URL}${path}`, {
+    res = await fetch(`${BASE_URL}${path}${buildQuery(query)}`, {
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
