@@ -1,6 +1,7 @@
 // Semua route backend berada di bawah prefix /api
 const BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api").replace(/\/+$/, "");
 const TOKEN_KEY = "ba_token";
+const USER_KEY = "ba_user";
 
 // Galat standar: semua halaman cukup menangkap ApiError
 export class ApiError extends Error {
@@ -31,9 +32,17 @@ export function setToken(token) {
     localStorage.setItem(TOKEN_KEY, token);
   } catch {}
 }
+// salinan data user (ba_user). Sumber kebenaran tetap /auth/me; ini hanya cache.
+export function setStoredUser(user) {
+  try {
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+  } catch {}
+}
+// menghapus token sekaligus ba_user, supaya data user tidak tertinggal setelah sesi berakhir
 export function clearToken() {
   try {
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
   } catch {}
 }
 
