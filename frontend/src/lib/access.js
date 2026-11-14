@@ -2,6 +2,7 @@
 // Dipakai AuthGuard (cek akses) dan StaffLayout (menyembunyikan menu yang tidak boleh diakses).
 export const ROUTE_ACCESS = {
   "/orders": ["admin", "mekanik", "owner"], // Owner: hanya lihat
+  "/orders/new": ["admin"],                 // Order Baru: hanya admin
   "/customers": ["admin", "owner"],
   "/parts": ["admin", "owner"],
   "/dashboard": ["owner"],
