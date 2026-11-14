@@ -6,6 +6,7 @@ import {
   ApiError,
   clearToken,
   getToken,
+  setStoredUser,
   setToken,
   setUnauthorizedHandler,
 } from "@/lib/apiClient";
@@ -41,7 +42,10 @@ export function AuthProvider({ children }) {
       }
       try {
         const me = await authService.getMe();
-        if (!cancelled) setUser(me);
+        if (!cancelled) {
+          setUser(me);
+          setStoredUser(me); // segarkan cache ba_user
+        }
       } catch {
         // 401 sudah ditangani oleh apiClient
       } finally {
@@ -55,17 +59,27 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  const login = useCallback(async (username, password) => {
-    const data = await authService.login(username, password);
+  // Simpan sesi hasil POST /auth/login yang dipanggil di luar context (mis. halaman login):
+  // ba_token + ba_user ke localStorage, lalu perbarui state.
+  const setSession = useCallback((token, sessionUser) => {
     // jaga-jaga bila format respons berubah: jangan simpan token kosong
-    if (!data?.token || !data?.user) {
+    if (!token || !sessionUser) {
       throw new ApiError("Respons login tidak valid dari server.", 500);
     }
-    setToken(data.token);
-    setUser(data.user);
+    setToken(token);
+    setStoredUser(sessionUser);
+    setUser(sessionUser);
     setSessionExpired(false);
-    return data.user;
   }, []);
+
+  const login = useCallback(
+    async (username, password) => {
+      const data = await authService.login(username, password);
+      setSession(data?.token, data?.user);
+      return data.user;
+    },
+    [setSession]
+  );
 
   const logout = useCallback(async () => {
     try {
@@ -84,6 +98,7 @@ export function AuthProvider({ children }) {
     role: normalizeRole(user?.peran),
     loading,
     sessionExpired,
+    setSession,
     login,
     logout,
     clearSessionExpired,
