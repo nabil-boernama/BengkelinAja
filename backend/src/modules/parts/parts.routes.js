@@ -7,5 +7,6 @@ const { createPartSchema, updatePartSchema, objectIdParamSchema } = require('./p
 router.get('/', authenticate, authorize('Admin', 'Owner'), controller.list);
 router.post('/', authenticate, authorize('Admin'), validate(createPartSchema), controller.create);
 router.patch('/:id', authenticate, authorize('Admin'), validate(objectIdParamSchema, 'params'), validate(updatePartSchema), controller.update);
+router.delete('/:id', authenticate, authorize('Admin'), validate(objectIdParamSchema, 'params'), controller.remove);
 
 module.exports = router;

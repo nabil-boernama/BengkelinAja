@@ -6,6 +6,9 @@ const {
   orderIdParamSchema,
   updateStatusSchema,
   recordServiceSchema,
+  updateOrderSchema,
+  cancelOrderSchema,
+  revertOrderSchema,
 } = require('./orders.validation');
 const validate = require('../../middleware/validate');
 const { authenticate, authorize } = require('../../middleware/auth');
@@ -35,6 +38,16 @@ router.get(
   controller.detail
 );
 
+// Ubah detail order (plat, keluhan, mekanik): Admin saja
+router.patch(
+  '/:id',
+  authenticate,
+  authorize(ROLES.ADMIN),
+  validate(orderIdParamSchema, 'params'),
+  validate(updateOrderSchema),
+  controller.updateDetails
+);
+
 router.patch(
   '/:id/status',
   authenticate,
@@ -51,6 +64,26 @@ router.put(
   validate(orderIdParamSchema, 'params'),
   validate(recordServiceSchema),
   controller.recordService
+);
+
+// Batalkan order (Antre atau Diperiksa): Admin saja
+router.post(
+  '/:id/cancel',
+  authenticate,
+  authorize(ROLES.ADMIN),
+  validate(orderIdParamSchema, 'params'),
+  validate(cancelOrderSchema),
+  controller.cancel
+);
+
+// Kembalikan order Selesai ke Dikerjakan: Admin saja
+router.post(
+  '/:id/revert',
+  authenticate,
+  authorize(ROLES.ADMIN),
+  validate(orderIdParamSchema, 'params'),
+  validate(revertOrderSchema),
+  controller.revert
 );
 
 module.exports = router;

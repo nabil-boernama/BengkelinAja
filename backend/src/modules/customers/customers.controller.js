@@ -52,4 +52,26 @@ const orders = asyncHandler(async (req, res) => {
   res.json({ success: true, data: { customer, orders: data } });
 });
 
-module.exports = { search, orders };
+// PATCH /customers/:id — ubah nama dan/atau nomor WhatsApp (Admin)
+// no_wa string kosong = hapus nomor (no_wa boleh kosong)
+const update = asyncHandler(async (req, res) => {
+  const customer = await Customer.findById(req.params.id);
+  if (!customer) throw new AppError('Pelanggan tidak ditemukan', 404);
+
+  const { nama, no_wa } = req.body;
+  if (nama !== undefined) customer.nama = nama;
+  if (no_wa !== undefined) customer.no_wa = no_wa === '' ? undefined : no_wa;
+
+  try {
+    await customer.save();
+  } catch (err) {
+    if (err.code === 11000) {
+      throw new AppError('Nomor WhatsApp sudah dipakai pelanggan lain', 409);
+    }
+    throw err;
+  }
+
+  res.json({ success: true, data: customer });
+});
+
+module.exports = { search, orders, update };

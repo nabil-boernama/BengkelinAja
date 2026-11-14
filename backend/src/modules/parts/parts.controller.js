@@ -1,4 +1,5 @@
 const Part = require('../../models/Part');
+const OrderItem = require('../../models/OrderItem');
 const AppError = require('../../utils/AppError');
 const asyncHandler = require('../../utils/asyncHandler');
 
@@ -25,4 +26,22 @@ const update = asyncHandler(async (req, res) => {
   res.json({ success: true, data: part });
 });
 
-module.exports = { list, create, update };
+// DELETE /parts/:id — hapus suku cadang yang belum pernah dipakai di order (FR-11)
+// Yang sudah pernah dipakai ditolak supaya riwayat servis tetap utuh.
+const remove = asyncHandler(async (req, res) => {
+  const part = await Part.findById(req.params.id);
+  if (!part) throw new AppError('Suku cadang tidak ditemukan', 404);
+
+  const dipakai = await OrderItem.exists({ part: part._id });
+  if (dipakai) {
+    throw new AppError(
+      'Suku cadang sudah pernah dipakai di order dan tidak bisa dihapus',
+      409
+    );
+  }
+
+  await part.deleteOne();
+  res.json({ success: true, data: { _id: part._id } });
+});
+
+module.exports = { list, create, update, remove };

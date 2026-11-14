@@ -13,7 +13,19 @@ const MEKANIK_SEQUENCE = [
   ORDER_STATUS.SELESAI,
 ];
 
-// POST /orders — buat order servis baru (FR-02)
+// Status akhir: order tidak boleh diubah lagi
+const FINAL_STATUS = [ORDER_STATUS.DIAMBIL, ORDER_STATUS.DIBATALKAN];
+
+// Sembunyikan sebagian nomor WA untuk Mekanik.
+// Contoh: "08123456789" -> "0812****89"
+const maskWA = (wa) => {
+  if (!wa) return null;
+  const s = String(wa);
+  if (s.length <= 6) return '*'.repeat(s.length);
+  return s.slice(0, 4) + '*'.repeat(s.length - 6) + s.slice(-2);
+};
+
+// POST /orders: buat order servis baru (FR-02)
 const create = asyncHandler(async (req, res) => {
   const { customer: customerInput, plat, keluhan, mekanik: mekanikId } = req.body;
 
@@ -61,7 +73,7 @@ const create = asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, data: order });
 });
 
-// GET /orders?status=&plat= — daftar order (FR-12). Mekanik hanya lihat order miliknya.
+// GET /orders?status=&plat=: daftar order (FR-12). Mekanik hanya lihat order miliknya.
 const list = asyncHandler(async (req, res) => {
   const { status, plat } = req.query;
   const filter = {};
@@ -75,10 +87,21 @@ const list = asyncHandler(async (req, res) => {
     .populate('mekanik', 'nama')
     .lean();
 
-  res.json({ success: true, data: orders });
+  // Mekanik hanya boleh lihat sebagian nomor WA pelanggan
+  const data =
+    req.user.peran === ROLES.MEKANIK
+      ? orders.map((o) => ({
+          ...o,
+          customer: o.customer
+            ? { ...o.customer, no_wa: maskWA(o.customer.no_wa) }
+            : o.customer,
+        }))
+      : orders;
+
+  res.json({ success: true, data });
 });
 
-// GET /orders/:id — detail order, rincian suku cadang, dan total biaya (FR-07)
+// GET /orders/:id: detail order, rincian suku cadang, dan total biaya (FR-07)
 const detail = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id)
     .populate('customer')
@@ -90,8 +113,14 @@ const detail = asyncHandler(async (req, res) => {
     throw new AppError('Anda tidak punya akses ke order ini', 403);
   }
 
+  // Mekanik hanya boleh lihat sebagian nomor WA pelanggan
+  if (req.user.peran === ROLES.MEKANIK && order.customer) {
+    order.customer = { ...order.customer, no_wa: maskWA(order.customer.no_wa) };
+  }
+
   const items = await OrderItem.find({ order: order._id }).populate('part', 'nama').lean();
   const rincian = items.map((it) => ({
+    part_id: it.part?._id,
     part: it.part?.nama,
     jumlah: it.jumlah,
     harga_satuan: it.harga_satuan,
@@ -105,10 +134,15 @@ const detail = asyncHandler(async (req, res) => {
   });
 });
 
-// PATCH /orders/:id/status — ubah status (FR-03). NFR-03: mekanik hanya order miliknya.
+// PATCH /orders/:id/status: ubah status (FR-03). NFR-03: mekanik hanya order miliknya.
 // NFR-08: setiap perubahan dicatat siapa dan kapan.
 const updateStatus = asyncHandler(async (req, res) => {
   const { status: target } = req.body;
+
+  if (target === ORDER_STATUS.DIBATALKAN) {
+    throw new AppError('Pembatalan hanya bisa lewat endpoint pembatalan order', 400);
+  }
+
   const order = await Order.findById(req.params.id);
   if (!order) throw new AppError('Order tidak ditemukan', 404);
 
@@ -142,10 +176,12 @@ const updateStatus = asyncHandler(async (req, res) => {
   res.json({ success: true, data: order });
 });
 
-// PUT /orders/:id/service — catat/ubah suku cadang + biaya jasa (FR-04).
+// PUT /orders/:id/service: catat/ubah suku cadang + biaya jasa (FR-04).
 // NFR-06: pencatatan suku cadang & pengurangan stok dalam satu transaksi atomik.
 // Body berisi daftar LENGKAP suku cadang yang dipakai (bukan tambahan); endpoint ini
-// menghitung selisih dengan data lama lalu menyesuaikan stok.
+// menghitung selisih bersih dengan data lama lalu menyesuaikan stok.
+// Boleh selama order belum Diambil atau Dibatalkan (termasuk saat Selesai, untuk koreksi).
+// Harga satuan baris yang sudah tercatat dipertahankan; baris baru memakai harga saat ini.
 const recordService = asyncHandler(async (req, res) => {
   const { items, biaya_jasa } = req.body;
   const orderId = req.params.id;
@@ -156,17 +192,21 @@ const recordService = asyncHandler(async (req, res) => {
     await session.withTransaction(async () => {
       const order = await Order.findById(orderId).session(session);
       if (!order) throw new AppError('Order tidak ditemukan', 404);
-      if ([ORDER_STATUS.SELESAI, ORDER_STATUS.DIAMBIL].includes(order.status)) {
-        throw new AppError('Order sudah selesai, suku cadang tidak bisa diubah lagi', 400);
+      if (FINAL_STATUS.includes(order.status)) {
+        throw new AppError(
+          'Order sudah diambil atau dibatalkan, suku cadang tidak bisa diubah lagi',
+          400
+        );
       }
 
       const existing = await OrderItem.find({ order: order._id }).session(session);
-      const existingByPart = new Map(existing.map((it) => [String(it.part), it.jumlah]));
+      const existingDocs = new Map(existing.map((it) => [String(it.part), it]));
       const incomingByPart = new Map(items.map((it) => [String(it.part), it.jumlah]));
-      const allPartIds = new Set([...existingByPart.keys(), ...incomingByPart.keys()]);
+      const allPartIds = new Set([...existingDocs.keys(), ...incomingByPart.keys()]);
 
       for (const partId of allPartIds) {
-        const oldQty = existingByPart.get(partId) || 0;
+        const oldDoc = existingDocs.get(partId);
+        const oldQty = oldDoc ? oldDoc.jumlah : 0;
         const newQty = incomingByPart.get(partId) || 0;
         const delta = newQty - oldQty; // positif = butuh stok tambahan, negatif = stok dikembalikan
 
@@ -185,15 +225,20 @@ const recordService = asyncHandler(async (req, res) => {
         }
 
         if (newQty > 0) {
-          const part = await Part.findById(partId).session(session);
-          if (!part) throw new AppError('Suku cadang tidak ditemukan', 404);
-          await OrderItem.findOneAndUpdate(
-            { order: order._id, part: partId },
-            { jumlah: newQty, harga_satuan: part.harga },
-            { upsert: true, session }
-          );
-        } else if (oldQty > 0) {
-          await OrderItem.deleteOne({ order: order._id, part: partId }, { session });
+          if (oldDoc) {
+            // baris lama: ubah jumlah saja, harga satuan lama dipertahankan
+            oldDoc.jumlah = newQty;
+            await oldDoc.save({ session });
+          } else {
+            const part = await Part.findById(partId).session(session);
+            if (!part) throw new AppError('Suku cadang tidak ditemukan', 404);
+            await OrderItem.create(
+              [{ order: order._id, part: partId, jumlah: newQty, harga_satuan: part.harga }],
+              { session }
+            );
+          }
+        } else if (oldDoc) {
+          await OrderItem.deleteOne({ _id: oldDoc._id }, { session });
         }
       }
 
@@ -208,4 +253,107 @@ const recordService = asyncHandler(async (req, res) => {
   res.json({ success: true, data: result });
 });
 
-module.exports = { create, list, detail, updateStatus, recordService };
+// PATCH /orders/:id: ubah detail order (plat, keluhan, mekanik). Admin saja.
+// Tidak boleh saat Diambil atau Dibatalkan; mekanik tidak boleh diganti saat Selesai.
+const updateDetails = asyncHandler(async (req, res) => {
+  const { plat, keluhan, mekanik: mekanikId } = req.body;
+
+  const order = await Order.findById(req.params.id);
+  if (!order) throw new AppError('Order tidak ditemukan', 404);
+
+  if (FINAL_STATUS.includes(order.status)) {
+    throw new AppError('Order yang sudah diambil atau dibatalkan tidak bisa diubah', 400);
+  }
+
+  if (mekanikId !== undefined && String(mekanikId) !== String(order.mekanik)) {
+    if (order.status === ORDER_STATUS.SELESAI) {
+      throw new AppError('Mekanik tidak bisa diganti setelah order selesai', 400);
+    }
+    const mekanik = await User.findOne({ _id: mekanikId, peran: ROLES.MEKANIK, aktif: true });
+    if (!mekanik) throw new AppError('Mekanik tidak ditemukan atau tidak aktif', 400);
+    order.mekanik = mekanik._id;
+  }
+
+  if (plat !== undefined) order.plat = plat; // dinormalisasi oleh setter di model
+  if (keluhan !== undefined) order.keluhan = keluhan;
+
+  await order.save();
+  await order.populate([{ path: 'customer' }, { path: 'mekanik', select: 'nama' }]);
+
+  res.json({ success: true, data: order });
+});
+
+// POST /orders/:id/cancel: batalkan order (hanya Antre atau Diperiksa). Admin saja.
+// Stok suku cadang yang sudah tercatat dikembalikan dalam satu transaksi.
+const cancel = asyncHandler(async (req, res) => {
+  const { alasan } = req.body;
+
+  const session = await mongoose.startSession();
+  let result;
+  try {
+    await session.withTransaction(async () => {
+      const order = await Order.findById(req.params.id).session(session);
+      if (!order) throw new AppError('Order tidak ditemukan', 404);
+      if (![ORDER_STATUS.ANTRE, ORDER_STATUS.DIPERIKSA].includes(order.status)) {
+        throw new AppError('Order hanya bisa dibatalkan saat berstatus Antre atau Diperiksa', 400);
+      }
+
+      // kembalikan stok suku cadang yang sudah tercatat, lalu hapus rinciannya
+      const items = await OrderItem.find({ order: order._id }).session(session);
+      for (const it of items) {
+        await Part.updateOne({ _id: it.part }, { $inc: { stok: it.jumlah } }, { session });
+      }
+      await OrderItem.deleteMany({ order: order._id }, { session });
+
+      order.status = ORDER_STATUS.DIBATALKAN;
+      order.alasan_batal = alasan;
+      order.dibatalkan_pada = new Date();
+      order.dibatalkan_oleh = req.user._id;
+      await order.save({ session });
+
+      await OrderStatusLog.create(
+        [
+          {
+            order: order._id,
+            status_baru: ORDER_STATUS.DIBATALKAN,
+            diubah_oleh: req.user._id,
+            alasan,
+          },
+        ],
+        { session }
+      );
+      result = order;
+    });
+  } finally {
+    session.endSession();
+  }
+
+  res.json({ success: true, data: result });
+});
+
+// POST /orders/:id/revert: kembalikan order Selesai ke Dikerjakan. Admin saja.
+const revert = asyncHandler(async (req, res) => {
+  const { alasan } = req.body;
+
+  const order = await Order.findById(req.params.id);
+  if (!order) throw new AppError('Order tidak ditemukan', 404);
+  if (order.status !== ORDER_STATUS.SELESAI) {
+    throw new AppError('Hanya order berstatus Selesai yang bisa dikembalikan ke Dikerjakan', 400);
+  }
+
+  order.status = ORDER_STATUS.DIKERJAKAN;
+  await order.save();
+
+  await OrderStatusLog.create({
+    order: order._id,
+    status_baru: ORDER_STATUS.DIKERJAKAN,
+    diubah_oleh: req.user._id,
+    alasan,
+  });
+
+  await order.populate([{ path: 'customer' }, { path: 'mekanik', select: 'nama' }]);
+
+  res.json({ success: true, data: order });
+});
+
+module.exports = { create, list, detail, updateStatus, recordService, updateDetails, cancel, revert };

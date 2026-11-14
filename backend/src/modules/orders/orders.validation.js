@@ -41,10 +41,34 @@ const recordServiceSchema = z.object({
   biaya_jasa: z.number().min(0),
 });
 
+// PATCH /orders/:id: ubah detail order (minimal satu field)
+const updateOrderSchema = z
+  .object({
+    plat: z.string().trim().min(3, 'Plat nomor tidak valid').max(15).optional(),
+    keluhan: z.string().trim().min(1, 'Keluhan wajib diisi').max(500).optional(),
+    mekanik: objectId.optional(),
+  })
+  .refine((d) => Object.values(d).some((v) => v !== undefined), {
+    message: 'Minimal satu field harus diisi',
+  });
+
+// POST /orders/:id/cancel
+const cancelOrderSchema = z.object({
+  alasan: z.string().trim().min(1, 'Alasan pembatalan wajib diisi').max(300),
+});
+
+// POST /orders/:id/revert (alasan opsional)
+const revertOrderSchema = z.object({
+  alasan: z.string().trim().max(300).optional(),
+});
+
 module.exports = {
   createOrderSchema,
   listOrdersQuerySchema,
   orderIdParamSchema,
   updateStatusSchema,
   recordServiceSchema,
+  updateOrderSchema,
+  cancelOrderSchema,
+  revertOrderSchema,
 };

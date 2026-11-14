@@ -27,10 +27,12 @@ router.get(
       .replace(/\s+/g, '')
       .toUpperCase();
 
-    const order = await Order.findOne({
+        const order = await Order.findOne({
       no_antrean,
       plat: normalizedPlat,
-    }).populate('mekanik', 'nama');
+    })
+      .sort({ tanggal_key: -1 })
+      .populate('mekanik', 'nama');
 
     if (!order) {
       return res.status(404).json({

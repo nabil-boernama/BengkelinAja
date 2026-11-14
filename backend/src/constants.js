@@ -10,6 +10,7 @@ const ORDER_STATUS = Object.freeze({
   DIKERJAKAN: "Dikerjakan",
   SELESAI: "Selesai",
   DIAMBIL: "Diambil",
+  DIBATALKAN: "Dibatalkan",
 });
 
 module.exports = { ROLES, ORDER_STATUS };

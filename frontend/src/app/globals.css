@@ -1,0 +1,5 @@
+@import './v7.css';
+@import './app.css';
+
+/* v7.css tidak mereset gaya bawaan <button>: tanpa ini tombol .b memakai border dan font bawaan browser */
+button.b { border: 0; font-family: inherit; }
