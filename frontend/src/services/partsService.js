@@ -2,7 +2,7 @@ import { api } from "@/lib/apiClient";
 
 const enc = encodeURIComponent;
 
-// GET /parts (Admin, Owner) -> setiap item punya penanda stok_menipis
+// GET /parts (Admin, Mekanik, Owner) -> setiap item punya penanda stok_menipis
 export function listParts() {
   return api.get("/parts");
 }
