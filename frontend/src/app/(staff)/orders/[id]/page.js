@@ -13,7 +13,7 @@ import usePolling from "@/hooks/usePolling";
 import { getOrderById, updateOrderStatus } from "@/lib/services/orderService";
 import { recordService, cancelOrder } from "@/services/ordersService";
 import { listParts } from "@/services/partsService";
-import { formatRupiah, formatTanggal } from "@/lib/format";
+import { formatPlat, formatRupiah, formatTanggal } from "@/lib/format";
 
 const POLL_MS = 30000;
 
@@ -431,7 +431,8 @@ function OrderDetailContent() {
       setDialogOpen(false);
       refresh();
     } catch (err) {
-      setSaveError(err?.message || "Gagal mengubah status.");
+      // Modal ini tanpa titik di akhir kalimat, termasuk pesan error umum dari apiClient
+      setSaveError((err?.message || "Gagal mengubah status").replace(/\.\s*$/, ""));
     } finally {
       setSaving(false);
     }
@@ -500,7 +501,7 @@ function OrderDetailContent() {
             <div className={role === "mekanik" ? "mask" : undefined}>{order.customer?.no_wa || "-"}</div>
             <div className="l">Kendaraan</div>
             <div>
-              <b>{order.plat || "-"}</b>
+              <b>{formatPlat(order.plat)}</b>
             </div>
             <div className="l">Keluhan</div>
             <div>{order.keluhan || "-"}</div>
@@ -559,7 +560,7 @@ function OrderDetailContent() {
       <Dialog
         open={dialogOpen}
         title="Ubah status"
-        message={`Order #${order.no_antrean} (${order.plat}) saat ini berstatus ${status}.`}
+        message={`Order #${order.no_antrean} (${formatPlat(order.plat)}) saat ini berstatus ${status}`}
         confirmLabel="Ubah Status"
         loading={saving}
         onConfirm={handleUpdateStatus}
@@ -587,7 +588,7 @@ function OrderDetailContent() {
       <Dialog
         open={cancelOpen}
         title="Batalkan order"
-        message={`Order #${order.no_antrean} (${order.plat}) akan dibatalkan. Tindakan ini tidak bisa diurungkan.`}
+        message={`Order #${order.no_antrean} (${formatPlat(order.plat)}) akan dibatalkan. Tindakan ini tidak bisa diurungkan.`}
         confirmLabel="Ya, Batalkan"
         loading={cancelling}
         onConfirm={handleCancel}

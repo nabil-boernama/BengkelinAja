@@ -8,7 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import usePolling from "@/hooks/usePolling";
 import useDebounce from "@/hooks/useDebounce";
 import { getOrders } from "@/lib/services/orderService";
-import { formatTanggalPendek } from "@/lib/format";
+import { formatPlat, formatTanggalPendek } from "@/lib/format";
 import { STATUS_LIST } from "@/lib/constants";
 
 const POLL_MS = 30000;
@@ -66,7 +66,7 @@ function OrdersContent() {
         </td>
         <td data-l="Tanggal">{formatTanggalPendek(o.tanggal)}</td>
         <td data-l="Plat">
-          <b>{o.plat ? o.plat.replace(/^([A-Z]{1,3})(\d+)([A-Z]{1,3})$/, '$1 $2 $3') : "-"}</b>
+          <b>{formatPlat(o.plat)}</b>
         </td>
         <td data-l="Pelanggan">{o.customer?.nama || "-"}</td>
         <td className="trunc" data-l="Keluhan" title={o.keluhan}>
