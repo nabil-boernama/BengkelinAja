@@ -42,18 +42,37 @@ const recordServiceSchema = z.object({
     )
     .default([]),
   biaya_jasa: z.number().min(0),
+  // opsional: bila tidak dikirim, deskripsi lama dipertahankan
+  deskripsi_jasa: z.string().trim().max(500, 'Deskripsi jasa maksimal 500 karakter').optional(),
 });
 
 // PATCH /orders/:id: ubah detail order (minimal satu field)
 const updateOrderSchema = z
   .object({
+    // data pelanggan pada order ini (nama, no WA); string kosong no_wa berarti hapus nomor
+    customer: z
+      .object({
+        nama: z.string().trim().min(1, 'Nama pelanggan wajib diisi').max(100).optional(),
+        no_wa: z
+          .union([
+            z.string().trim().regex(/^\+?[0-9\s-]{8,20}$/, 'Nomor WhatsApp tidak valid'),
+            z.literal(''),
+          ])
+          .optional(),
+      })
+      .optional(),
     plat: z.string().trim().min(3, 'Plat nomor tidak valid').max(15).optional(),
     keluhan: z.string().trim().min(1, 'Keluhan wajib diisi').max(500).optional(),
     mekanik: objectId.optional(),
   })
-  .refine((d) => Object.values(d).some((v) => v !== undefined), {
-    message: 'Minimal satu field harus diisi',
-  });
+  .refine(
+    (d) =>
+      d.plat !== undefined ||
+      d.keluhan !== undefined ||
+      d.mekanik !== undefined ||
+      (d.customer && (d.customer.nama !== undefined || d.customer.no_wa !== undefined)),
+    { message: 'Minimal satu field harus diisi' }
+  );
 
 // POST /orders/:id/cancel
 const cancelOrderSchema = z.object({

@@ -11,15 +11,24 @@ import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/components/ui/Toast";
 import usePolling from "@/hooks/usePolling";
 import { getOrderById, updateOrderStatus } from "@/lib/services/orderService";
-import { recordService, cancelOrder } from "@/services/ordersService";
+import {
+  recordService,
+  cancelOrder,
+  updateOrder,
+  getMechanicWorkload,
+  getReceiptPdf,
+} from "@/services/ordersService";
 import { listParts } from "@/services/partsService";
 import { formatPlat, formatRupiah, formatTanggal } from "@/lib/format";
 
 const POLL_MS = 30000;
+const DESKRIPSI_MAX = 500; // sama dengan batas di backend
 
 const MEKANIK_NEXT = { Antre: "Diperiksa", Diperiksa: "Dikerjakan", Dikerjakan: "Selesai" };
 const FINAL_STATUS = ["Diambil", "Dibatalkan"];
 const CANCEL_ALLOWED = ["Antre", "Diperiksa"];
+// Data order (pelanggan, kendaraan, keluhan, mekanik) hanya bisa diubah sebelum Selesai
+const EDIT_ALLOWED = ["Antre", "Diperiksa", "Dikerjakan"];
 
 function nextStatusOptions(role, status) {
   if (role === "mekanik" && MEKANIK_NEXT[status]) return [MEKANIK_NEXT[status]];
@@ -80,6 +89,11 @@ function DetailSkeleton() {
 }
 
 function Rincian({ order }) {
+  // Order dibatalkan: tidak ada suku cadang maupun biaya jasa yang ditagihkan
+  if (order.status === "Dibatalkan") {
+    return <p className="muted">Order dibatalkan, tidak ada rincian biaya.</p>;
+  }
+
   const items = Array.isArray(order.items) ? order.items : [];
   return (
     <>
@@ -110,6 +124,8 @@ function Rincian({ order }) {
         </div>
       )}
       <div className="kv" style={{ gridTemplateColumns: "1fr auto", marginTop: items.length ? 6 : 12 }}>
+        <div>Jasa servis</div>
+        <div style={{ textAlign: "right", whiteSpace: "pre-line" }}>{order.deskripsi_jasa || "-"}</div>
         <div>Biaya jasa</div>
         <div style={{ textAlign: "right" }}>{formatRupiah(order.biaya_jasa ?? 0)}</div>
         <div>
@@ -145,6 +161,7 @@ function SearchableSelect({ parts, value, onChange, disabled }) {
       <input
         type="text"
         className="in"
+        autoComplete="off"
         value={displayValue}
         onChange={(e) => {
           setQuery(e.target.value);
@@ -194,18 +211,22 @@ function SearchableSelect({ parts, value, onChange, disabled }) {
   );
 }
 
-function CatatServisForm({ orderId, initialItems, initialBiayaJasa, onSaved }) {
+// Kondisi default form: rincian yang sudah tersimpan di order (atau kosong)
+function toRows(items) {
+  return Array.isArray(items) && items.length > 0
+    ? items.map((it) => ({ part: it.part_id || "", jumlah: it.jumlah || 1 }))
+    : [];
+}
+
+function CatatServisForm({ orderId, initialItems, initialBiayaJasa, initialDeskripsiJasa, onSaved }) {
   const toast = useToast();
 
   const [parts, setParts] = useState([]);
   const [loadingParts, setLoadingParts] = useState(true);
 
-  const [rows, setRows] = useState(() =>
-    Array.isArray(initialItems) && initialItems.length > 0
-      ? initialItems.map((it) => ({ part: it.part_id || "", jumlah: it.jumlah || 1 }))
-      : []
-  );
+  const [rows, setRows] = useState(() => toRows(initialItems));
   const [biayaJasa, setBiayaJasa] = useState(initialBiayaJasa ?? 0);
+  const [deskripsiJasa, setDeskripsiJasa] = useState(initialDeskripsiJasa ?? "");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
 
@@ -253,11 +274,17 @@ function CatatServisForm({ orderId, initialItems, initialBiayaJasa, onSaved }) {
       return;
     }
 
+    if (deskripsiJasa.trim().length > DESKRIPSI_MAX) {
+      setSaveError(`Deskripsi jasa maksimal ${DESKRIPSI_MAX} karakter.`);
+      return;
+    }
+
     setSaving(true);
     try {
       await recordService(orderId, {
         items: rows.map((r) => ({ part: r.part, jumlah: Number(r.jumlah) })),
         biaya_jasa: parsedBiaya,
+        deskripsi_jasa: deskripsiJasa.trim(),
       });
       toast.success("Rincian servis berhasil disimpan.");
       onSaved();
@@ -303,6 +330,7 @@ function CatatServisForm({ orderId, initialItems, initialBiayaJasa, onSaved }) {
               <input
                 type="number"
                 className="in"
+                autoComplete="off"
                 min={1}
                 value={row.jumlah}
                 onChange={(e) => updateRow(idx, "jumlah", e.target.value)}
@@ -334,6 +362,24 @@ function CatatServisForm({ orderId, initialItems, initialBiayaJasa, onSaved }) {
             + Tambah Suku Cadang
           </button>
 
+          <div className="fld" style={{ marginBottom: 12 }}>
+            <label htmlFor="deskripsi-jasa">
+              <span>Deskripsi jasa servis</span>
+              <textarea
+                id="deskripsi-jasa"
+                className="in"
+                autoComplete="off"
+                rows={3}
+                maxLength={DESKRIPSI_MAX}
+                value={deskripsiJasa}
+                onChange={(e) => setDeskripsiJasa(e.target.value)}
+                disabled={saving}
+                placeholder="Contoh: ganti oli, cek rem, servis karburator"
+                style={{ resize: "vertical" }}
+              />
+            </label>
+          </div>
+
           <div className="fld" style={{ maxWidth: 300 }}>
             <label htmlFor="biaya-jasa">
               <span>Biaya jasa (Rp)</span>
@@ -341,6 +387,7 @@ function CatatServisForm({ orderId, initialItems, initialBiayaJasa, onSaved }) {
                 id="biaya-jasa"
                 type="number"
                 className="in"
+                autoComplete="off"
                 min={0}
                 value={biayaJasa}
                 onChange={(e) => setBiayaJasa(e.target.value)}
@@ -372,6 +419,175 @@ function CatatServisForm({ orderId, initialItems, initialBiayaJasa, onSaved }) {
   );
 }
 
+// Form ubah data order (pelanggan, WhatsApp, kendaraan, keluhan, mekanik).
+// Di-mount hanya saat dialog dibuka, jadi isinya selalu mulai dari data order terbaru.
+function EditOrderDialog({ order, onClose, onSaved }) {
+  const toast = useToast();
+
+  const [nama, setNama] = useState(order.customer?.nama || "");
+  const [noWa, setNoWa] = useState(order.customer?.no_wa || "");
+  const [plat, setPlat] = useState(formatPlat(order.plat) === "-" ? "" : formatPlat(order.plat));
+  const [keluhan, setKeluhan] = useState(order.keluhan || "");
+  const [mekanik, setMekanik] = useState(String(order.mekanik?._id || ""));
+  const [mechanics, setMechanics] = useState([]);
+  const [loadingMechanics, setLoadingMechanics] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState("");
+
+  useEffect(() => {
+    getMechanicWorkload()
+      .then((data) => setMechanics(Array.isArray(data) ? data : []))
+      .catch(() => setMechanics([]))
+      .finally(() => setLoadingMechanics(false));
+  }, []);
+
+  // mekanik saat ini tetap jadi pilihan walau sudah tidak aktif
+  const currentId = String(order.mekanik?._id || "");
+  const mechanicOptions =
+    currentId && !mechanics.some((m) => String(m.id || m._id) === currentId)
+      ? [{ id: currentId, nama: order.mekanik?.nama || "Mekanik saat ini" }, ...mechanics]
+      : mechanics;
+
+  async function handleSave() {
+    if (saving) return;
+    setFormError("");
+
+    const namaTrim = nama.trim();
+    const waTrim = noWa.trim();
+    const platKey = plat.replace(/\s+/g, "").toUpperCase();
+    const keluhanTrim = keluhan.trim();
+
+    if (!namaTrim) return setFormError("Nama pelanggan wajib diisi.");
+    if (waTrim && !/^\+?[0-9\s-]{8,20}$/.test(waTrim)) {
+      return setFormError("Nomor WhatsApp tidak valid.");
+    }
+    if (platKey.length < 3 || platKey.length > 15) return setFormError("Plat nomor tidak valid.");
+    if (!keluhanTrim) return setFormError("Keluhan wajib diisi.");
+    if (!mekanik) return setFormError("Pilih mekanik.");
+
+    // kirim hanya field yang berubah
+    const payload = {};
+    const customer = {};
+    if (namaTrim !== (order.customer?.nama || "")) customer.nama = namaTrim;
+    if (waTrim !== (order.customer?.no_wa || "")) customer.no_wa = waTrim;
+    if (Object.keys(customer).length > 0) payload.customer = customer;
+    if (platKey !== String(order.plat || "").replace(/\s+/g, "").toUpperCase()) payload.plat = platKey;
+    if (keluhanTrim !== (order.keluhan || "")) payload.keluhan = keluhanTrim;
+    if (mekanik !== currentId) payload.mekanik = mekanik;
+
+    if (Object.keys(payload).length === 0) {
+      onClose();
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await updateOrder(order._id, payload);
+      toast.success(`Data order #${order.no_antrean} diperbarui.`);
+      onSaved();
+      onClose();
+    } catch (err) {
+      setFormError(
+        err?.status === 409
+          ? "Nomor WhatsApp sudah dipakai pelanggan lain."
+          : err?.message || "Gagal menyimpan perubahan."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog
+      open
+      title="Ubah data order"
+      message={`Order #${order.no_antrean}. Perubahan nama dan nomor WhatsApp berlaku untuk data pelanggan ini di semua order.`}
+      confirmLabel="Simpan"
+      loading={saving}
+      onConfirm={handleSave}
+      onCancel={onClose}
+    >
+      <label className="fld" htmlFor="edit-nama" style={{ marginBottom: 12 }}>
+        <span>Pelanggan</span>
+        <input
+          id="edit-nama"
+          className="in"
+          autoComplete="off"
+          maxLength={100}
+          value={nama}
+          onChange={(e) => setNama(e.target.value)}
+          disabled={saving}
+        />
+      </label>
+      <label className="fld" htmlFor="edit-wa" style={{ marginBottom: 12 }}>
+        <span>WhatsApp (opsional)</span>
+        <input
+          id="edit-wa"
+          className="in"
+          autoComplete="off"
+          inputMode="tel"
+          maxLength={20}
+          placeholder="0812 3456 7890"
+          value={noWa}
+          onChange={(e) => setNoWa(e.target.value)}
+          disabled={saving}
+        />
+      </label>
+      <label className="fld" htmlFor="edit-plat" style={{ marginBottom: 12 }}>
+        <span>Kendaraan (plat nomor)</span>
+        <input
+          id="edit-plat"
+          className="in"
+          autoComplete="off"
+          maxLength={15}
+          value={plat}
+          onChange={(e) => setPlat(e.target.value.toUpperCase())}
+          disabled={saving}
+        />
+      </label>
+      <label className="fld" htmlFor="edit-keluhan" style={{ marginBottom: 12 }}>
+        <span>Keluhan</span>
+        <textarea
+          id="edit-keluhan"
+          className="in"
+          autoComplete="off"
+          rows={3}
+          maxLength={500}
+          value={keluhan}
+          onChange={(e) => setKeluhan(e.target.value)}
+          disabled={saving}
+          style={{ resize: "vertical" }}
+        />
+      </label>
+      <label className="fld" htmlFor="edit-mekanik" style={{ marginBottom: 12 }}>
+        <span>Mekanik</span>
+        {loadingMechanics ? (
+          <p className="muted">Memuat daftar mekanik...</p>
+        ) : (
+          <select
+            id="edit-mekanik"
+            className="in"
+            value={mekanik}
+            onChange={(e) => setMekanik(e.target.value)}
+            disabled={saving}
+          >
+            {mechanicOptions.map((m) => {
+              const mid = String(m.id || m._id);
+              return (
+                <option key={mid} value={mid}>
+                  {m.nama}
+                  {m.order_aktif !== undefined ? ` (${m.order_aktif} order aktif)` : ""}
+                </option>
+              );
+            })}
+          </select>
+        )}
+      </label>
+      {formError && <ErrorMessage>{formError}</ErrorMessage>}
+    </Dialog>
+  );
+}
+
 function OrderDetailContent() {
   const { id } = useParams();
   const { role } = useAuth();
@@ -388,6 +604,18 @@ function OrderDetailContent() {
   const [alasan, setAlasan] = useState("");
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState("");
+  const [editOpen, setEditOpen] = useState(false);
+  const [printing, setPrinting] = useState(false);
+
+  // Jangan tampilkan data order lain selama data order ini belum termuat
+  if (order && String(order._id) !== String(id)) {
+    return (
+      <>
+        <BackLink />
+        <DetailSkeleton />
+      </>
+    );
+  }
 
   if (loading && !order) {
     return (
@@ -435,6 +663,34 @@ function OrderDetailContent() {
       setSaveError((err?.message || "Gagal mengubah status").replace(/\.\s*$/, ""));
     } finally {
       setSaving(false);
+    }
+  }
+
+  // Buka struk PDF di tab baru; bila pop-up diblokir, unduh sebagai file.
+  async function handlePrintReceipt() {
+    if (printing) return;
+    // tab dibuka langsung saat klik supaya tidak dianggap pop-up oleh browser
+    const tab = window.open("", "_blank");
+    setPrinting(true);
+    try {
+      const blob = await getReceiptPdf(order._id);
+      const url = URL.createObjectURL(blob);
+      if (tab) {
+        tab.location.href = url;
+      } else {
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `struk-${order.no_antrean}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (err) {
+      tab?.close();
+      toast.error(err?.message || "Gagal membuat struk.");
+    } finally {
+      setPrinting(false);
     }
   }
 
@@ -519,15 +775,27 @@ function OrderDetailContent() {
 
       {role === "admin" && !isFinal && (
         <CatatServisForm
+          // key per order: form di-mount ulang dengan kondisi default tiap kali order berganti
           key={order._id}
           orderId={order._id}
           initialItems={order.items}
           initialBiayaJasa={order.biaya_jasa}
+          initialDeskripsiJasa={order.deskripsi_jasa}
           onSaved={refresh}
         />
       )}
 
       <div className="row" style={{ marginTop: 24 }}>
+        {role === "admin" && status === "Diambil" && (
+          <button type="button" className="b b-r" onClick={handlePrintReceipt} disabled={printing}>
+            {printing ? "Menyiapkan Struk..." : "Cetak Struk"}
+          </button>
+        )}
+        {role === "admin" && EDIT_ALLOWED.includes(status) && (
+          <button type="button" className="b b-g" onClick={() => setEditOpen(true)}>
+            Ubah Data Order
+          </button>
+        )}
         {options.length > 0 && (
           <button type="button" className="b b-r" onClick={openDialog}>
             Ubah Status
@@ -555,6 +823,10 @@ function OrderDetailContent() {
         <div className="cnote" style={{ marginTop: 16 }}>
           Anda hanya dapat memajukan tahap order milik Anda. Rincian suku cadang dicatat Admin.
         </div>
+      )}
+
+      {editOpen && (
+        <EditOrderDialog order={order} onClose={() => setEditOpen(false)} onSaved={refresh} />
       )}
 
       <Dialog
@@ -613,9 +885,11 @@ function OrderDetailContent() {
 }
 
 export default function OrderDetailPage() {
+  const { id } = useParams();
   return (
     <StaffLayout>
-      <OrderDetailContent />
+      {/* key per order: seluruh state halaman (form, dialog, data polling) mulai dari awal saat ID berubah */}
+      <OrderDetailContent key={id} />
     </StaffLayout>
   );
 }

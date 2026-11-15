@@ -78,6 +78,8 @@ async function request(path, { method = "GET", body, query, auth = true, raw = f
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
+      // selalu ambil data terbaru: jangan pakai respons dari cache HTTP browser
+      cache: "no-store",
     });
   } catch {
     throw new ApiError("Tidak dapat terhubung ke server. Periksa koneksi Anda.", 0);

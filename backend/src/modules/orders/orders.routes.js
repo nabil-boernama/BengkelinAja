@@ -38,7 +38,7 @@ router.get(
   controller.detail
 );
 
-// Ubah detail order (plat, keluhan, mekanik): Admin saja
+// Ubah detail order (pelanggan, no WA, plat, keluhan, mekanik): Admin saja
 router.patch(
   '/:id',
   authenticate,

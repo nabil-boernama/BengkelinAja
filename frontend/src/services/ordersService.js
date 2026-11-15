@@ -18,7 +18,8 @@ export function createOrder(payload) {
   return api.post("/orders", payload);
 }
 
-// PATCH /orders/:id (Admin). payload: { plat?, keluhan?, mekanik? }
+// PATCH /orders/:id (Admin), hanya saat Antre/Diperiksa/Dikerjakan.
+// payload: { customer?: { nama?, no_wa? }, plat?, keluhan?, mekanik? }
 export function updateOrder(id, payload) {
   return api.patch(`/orders/${enc(id)}`, payload);
 }
@@ -29,8 +30,8 @@ export function updateOrderStatus(id, status) {
 }
 
 // PUT /orders/:id/service (Admin). items: [{ part, jumlah }]
-export function recordService(id, { items = [], biaya_jasa }) {
-  return api.put(`/orders/${enc(id)}/service`, { items, biaya_jasa });
+export function recordService(id, { items = [], biaya_jasa, deskripsi_jasa }) {
+  return api.put(`/orders/${enc(id)}/service`, { items, biaya_jasa, deskripsi_jasa });
 }
 
 // POST /orders/:id/cancel (Admin), hanya untuk status Antre atau Diperiksa
