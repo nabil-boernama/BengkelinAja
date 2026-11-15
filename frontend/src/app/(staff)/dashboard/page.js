@@ -12,13 +12,6 @@ const PERIOD_LABELS = {
   monthly: "Bulanan",
 };
 
-const ACTIVE_STATUS_SAMPLE = [
-  { status: "Antre", total: 3 },
-  { status: "Diperiksa", total: 2 },
-  { status: "Dikerjakan", total: 4 },
-  { status: "Selesai", total: 1 },
-];
-
 function getErrorMessage(error) {
   return error?.message || "Laporan gagal dimuat. Coba lagi.";
 }
@@ -39,6 +32,7 @@ export default function DashboardPage() {
           !data ||
           typeof data.total_pendapatan !== "number" ||
           typeof data.total_order !== "number" ||
+          !Array.isArray(data.order_aktif_per_status) ||
           !Array.isArray(data.stok_menipis)
         ) {
           throw new Error("Data laporan dari server tidak sesuai.");
@@ -74,10 +68,8 @@ export default function DashboardPage() {
     setRefreshKey((current) => current + 1);
   }
 
-  const maxActiveOrders = Math.max(
-    ...ACTIVE_STATUS_SAMPLE.map((item) => item.total),
-    1
-  );
+  const activeOrders = report?.order_aktif_per_status ?? [];
+  const maxActiveOrders = Math.max(...activeOrders.map((item) => item.total), 1);
 
   const content = (
     <div>
@@ -125,7 +117,7 @@ export default function DashboardPage() {
       </div>
 
       {error && (
-        <div className="ermsg" role="alert" style={{ marginBottom: 16 }}>
+        <div className="ermsg on" role="alert" style={{ marginBottom: 16 }}>
           <span>{error}</span>
         </div>
       )}
@@ -175,7 +167,7 @@ export default function DashboardPage() {
           ) : report?.stok_menipis.length ? (
             <div className="cards" style={{ gap: 12 }}>
               {report.stok_menipis.map((part) => (
-                <div className="cc row sp" key={part._id || part.id}>
+                <div className="cc stock-low-row" key={part._id || part.id}>
                   <span>
                     <b>{part.nama}</b>
                     <br />
@@ -197,33 +189,42 @@ export default function DashboardPage() {
 
         <section className="pn">
           <h2>Order Aktif per Status</h2>
-          <p className="help" style={{ marginBottom: 16 }}>
-            Data jumlah order per status masih contoh sementara.
-          </p>
-          <div className="cards" style={{ gap: 14 }}>
-            {ACTIVE_STATUS_SAMPLE.map((item) => (
-              <div
-                className="row"
-                key={item.status}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "100px minmax(40px, 1fr) 32px",
-                  gap: 12,
-                  fontWeight: 700,
-                }}
-              >
-                <span>{item.status}</span>
-                <span className="sk" style={{ height: 18, width: `${(item.total / maxActiveOrders) * 100}%` }} />
-                <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
-                  {item.total}
-                </span>
+          {loading && !report ? (
+            <p className="muted" role="status">Memuat data order...</p>
+          ) : report ? (
+            activeOrders.length > 0 ? (
+              <div className="cards" style={{ gap: 14 }}>
+                {activeOrders.map((item) => (
+                  <div
+                    className="row"
+                    key={item.status}
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "100px minmax(40px, 1fr) 32px",
+                      gap: 12,
+                      fontWeight: 700,
+                    }}
+                  >
+                    <span>{item.status}</span>
+                    <span
+                      className="sk"
+                      style={{
+                        height: 18,
+                        width: `${(item.total / maxActiveOrders) * 100}%`,
+                      }}
+                    />
+                    <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+                      {item.total}
+                    </span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            ) : (
+              <p className="muted">Tidak ada order aktif.</p>
+            )
+          ) : null}
         </section>
       </div>
-
-      {/* TODO: Tambahkan jumlah order aktif per status setelah API laporan menyediakannya. */}
     </div>
   );
 

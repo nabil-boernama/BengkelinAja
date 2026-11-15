@@ -5,39 +5,11 @@ import Link from "next/link";
 import PageBackground from "@/components/layout/PageBackground";
 import StatusMarker from "@/components/ui/StatusMarker";
 import StatusStepper from "@/components/ui/StatusStepper";
+import { ApiError } from "@/lib/apiClient";
+import { formatTanggal } from "@/lib/format";
+import { getTrackReceiptPdf, trackOrder } from "@/services/trackService";
 
-const SAMPLE_ORDERS = {
-  "14|AB 3456 CD": {
-    status: "Dikerjakan",
-    mekanik: "Rudi Hartono",
-    tanggal: "12 Nov 2026, 09.15 WIB",
-  },
-  "13|AB 7788 EF": {
-    status: "Diperiksa",
-    mekanik: "Joko Prasetyo",
-    tanggal: "12 Nov 2026, 10.05 WIB",
-  },
-  "12|AB 1122 GH": {
-    status: "Selesai",
-    mekanik: "Rudi Hartono",
-    tanggal: "12 Nov 2026, 10.40 WIB",
-  },
-  "11|AB 9900 IJ": {
-    status: "Antre",
-    mekanik: "Joko Prasetyo",
-    tanggal: "12 Nov 2026, 11.10 WIB",
-  },
-  "10|AB 2020 KL": {
-    status: "Diambil",
-    mekanik: "Rudi Hartono",
-    tanggal: "11 Nov 2026, 13.30 WIB",
-  },
-  "9|AB 5566 MN": {
-    status: "Dibatalkan",
-    mekanik: "Joko Prasetyo",
-    tanggal: "11 Nov 2026, 09.00 WIB",
-  },
-};
+const RECEIPT_AVAILABLE_STATUSES = ["Selesai", "Diambil"];
 
 export default function CekStatusPage() {
   const [nomorAntrean, setNomorAntrean] = useState("");
@@ -45,7 +17,9 @@ export default function CekStatusPage() {
   const [errors, setErrors] = useState({});
   const [message, setMessage] = useState("");
   const [result, setResult] = useState(null);
-  const [failures, setFailures] = useState(0);
+  const [receiptLookup, setReceiptLookup] = useState(null);
+  const [receiptLoading, setReceiptLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [remaining, setRemaining] = useState(0);
 
   useEffect(() => {
@@ -64,9 +38,9 @@ export default function CekStatusPage() {
     return () => window.clearTimeout(timer);
   }, [remaining]);
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
-    if (remaining > 0) return;
+    if (submitting || remaining > 0) return;
 
     const normalizedNomor = nomorAntrean.trim();
     const normalizedPlat = plat.trim().toUpperCase().replace(/\s+/g, " ");
@@ -78,35 +52,67 @@ export default function CekStatusPage() {
     setErrors(nextErrors);
     setMessage("");
     setResult(null);
+    setReceiptLookup(null);
 
     if (nextErrors.nomorAntrean || nextErrors.plat) return;
 
-    // TODO: Ganti data contoh dengan trackingService setelah endpoint publik difinalkan.
-    const order = SAMPLE_ORDERS[`${normalizedNomor}|${normalizedPlat}`];
+    setSubmitting(true);
+    try {
+      const order = await trackOrder(normalizedNomor, normalizedPlat);
+      setResult(order);
+      setReceiptLookup({ noAntrean: normalizedNomor, plat: normalizedPlat });
+    } catch (error) {
+      if (!(error instanceof ApiError)) throw error;
 
-    if (!order) {
-      const nextFailures = failures + 1;
-      setFailures(nextFailures);
-
-      if (nextFailures >= 4) {
-        setFailures(4);
-        setRemaining(45);
+      if (error.status === 404) {
+        setMessage("not-found");
+      } else if (error.status === 429) {
+        setRemaining(error.retryAfter || 60);
         setMessage("rate-limit");
       } else {
-        setMessage("not-found");
+        setMessage(error.message || "Terjadi kesalahan. Coba lagi.");
       }
-
-      return;
+    } finally {
+      setSubmitting(false);
     }
+  }
 
-    setFailures(0);
-    setResult(order);
+  async function handleViewReceipt() {
+    if (!receiptLookup || receiptLoading) return;
+
+    const tab = window.open("", "_blank");
+    setReceiptLoading(true);
+    try {
+      const blob = await getTrackReceiptPdf(
+        receiptLookup.noAntrean,
+        receiptLookup.plat
+      );
+      const url = URL.createObjectURL(blob);
+      if (tab) {
+        tab.location.href = url;
+      } else {
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `struk-${receiptLookup.noAntrean}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      }
+      window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (error) {
+      tab?.close();
+      setMessage(error?.message || "Gagal membuka struk.");
+    } finally {
+      setReceiptLoading(false);
+    }
   }
 
   const messageText =
     message === "rate-limit"
       ? `Terlalu banyak pencarian. Coba lagi dalam ${remaining} detik.`
-      : "Data servis tidak ditemukan. Periksa kembali nomor antrean dan plat nomor.";
+      : message === "not-found"
+        ? "Data servis tidak ditemukan. Periksa kembali nomor antrean dan plat nomor."
+        : message;
 
   return (
     <>
@@ -183,14 +189,21 @@ export default function CekStatusPage() {
               </div>
             )}
 
-            <button className="b b-p full" type="submit" disabled={remaining > 0}>
-              {remaining > 0 ? `Coba lagi dalam ${remaining} detik` : "Cek Status"}
+            <button
+              className="b b-p full"
+              type="submit"
+              disabled={submitting || remaining > 0}
+            >
+              {submitting
+                ? "Mencari status..."
+                : remaining > 0
+                  ? `Coba lagi dalam ${remaining} detik`
+                  : "Cek Status"}
             </button>
           </form>
 
           <p className="help" style={{ marginTop: 16 }}>
-            Contoh untuk dicoba: 14 dan AB 3456 CD. Isian tidak disimpan di alamat
-            atau peramban.
+            Gunakan nomor antrean dan plat nomor yang tertera pada bukti servis.
           </p>
         </section>
 
@@ -204,10 +217,21 @@ export default function CekStatusPage() {
             <StatusStepper status={result.status} />
             <div className="kv" style={{ marginTop: 16 }}>
               <div className="l">Tanggal masuk</div>
-              <div>{result.tanggal}</div>
+              <div>{formatTanggal(result.tanggal)}</div>
               <div className="l">Mekanik</div>
-              <div>{result.mekanik}</div>
+              <div>{result.mekanik || "-"}</div>
             </div>
+            {RECEIPT_AVAILABLE_STATUSES.includes(result.status) && (
+              <button
+                type="button"
+                className="b b-p full"
+                style={{ marginTop: 20 }}
+                onClick={handleViewReceipt}
+                disabled={receiptLoading}
+              >
+                {receiptLoading ? "Membuka struk..." : "Lihat Struk PDF"}
+              </button>
+            )}
           </section>
         )}
 

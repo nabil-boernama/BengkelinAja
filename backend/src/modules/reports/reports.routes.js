@@ -3,6 +3,14 @@ const { authenticate, authorize } = require('../../middleware/auth');
 const Order = require('../../models/Order');
 const OrderItem = require('../../models/OrderItem');
 const Part = require('../../models/Part');
+const { ORDER_STATUS } = require('../../constants');
+
+const ACTIVE_ORDER_STATUSES = [
+  ORDER_STATUS.ANTRE,
+  ORDER_STATUS.DIPERIKSA,
+  ORDER_STATUS.DIKERJAKAN,
+  ORDER_STATUS.SELESAI,
+];
 
 // WIB = UTC+7 (tanpa daylight saving). Kita hitung awal periode berdasarkan tanggal di WIB,
 // supaya hasilnya sama di laptop maupun di server yang berjam UTC.
@@ -44,6 +52,16 @@ router.get('/dashboard', authenticate, authorize('Owner'), async (req, res, next
     const totalPendapatan = totalJasa + totalSukuCadang;
     const totalOrder = orders.length;
 
+    const activeStatusCounts = await Order.aggregate([
+      { $match: { status: { $in: ACTIVE_ORDER_STATUSES } } },
+      { $group: { _id: '$status', total: { $sum: 1 } } },
+    ]);
+    const countByStatus = new Map(activeStatusCounts.map(({ _id, total }) => [_id, total]));
+    const orderAktifPerStatus = ACTIVE_ORDER_STATUSES.map((status) => ({
+      status,
+      total: countByStatus.get(status) || 0,
+    }));
+
     const parts = await Part.find().lean();
     const stokMenipis = parts.filter((p) => p.stok <= p.batas_minimum);
 
@@ -53,6 +71,7 @@ router.get('/dashboard', authenticate, authorize('Owner'), async (req, res, next
         period,
         total_pendapatan: totalPendapatan,
         total_order: totalOrder,
+        order_aktif_per_status: orderAktifPerStatus,
         stok_menipis: stokMenipis,
       },
     });
