@@ -21,6 +21,7 @@ const createOrderSchema = z.object({
 const listOrdersQuerySchema = z.object({
   status: z.enum(statusValues).optional(),
   plat: z.string().trim().max(15).optional(),
+  tanggal: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });
 
 const orderIdParamSchema = z.object({ id: objectId });

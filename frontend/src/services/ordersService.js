@@ -3,8 +3,8 @@ import { api } from "@/lib/apiClient";
 const enc = encodeURIComponent;
 
 // GET /orders?status=&plat= (Admin, Mekanik, Owner). Mekanik hanya menerima order miliknya.
-export function listOrders({ status, plat } = {}) {
-  return api.get("/orders", { query: { status, plat } });
+export function listOrders({ status, plat, tanggal } = {}) {
+  return api.get("/orders", { query: { status, plat, tanggal } });
 }
 
 // GET /orders/:id
