@@ -4,7 +4,7 @@ export const ROUTE_ACCESS = {
   "/orders": ["admin", "mekanik", "owner"], // Owner: hanya lihat
   "/orders/new": ["admin"],                 // Order Baru: hanya admin
   "/customers": ["admin", "mekanik", "owner"],
-  "/parts": ["admin", "owner"],
+  "/parts": ["admin", "mekanik", "owner"], // Mekanik & Owner: hanya lihat
   "/dashboard": ["owner"],
 };
 
@@ -14,11 +14,12 @@ export const ROLE_LABEL = {
   owner: "Owner",
 };
 
-// "/orders/123" -> ["admin", "mekanik", "owner"]; null bila path tidak dibatasi peran
+// "/orders/123" -> ["admin", "mekanik", "owner"]; null bila path tidak dibatasi peran.
+// Pakai kecocokan terpanjang agar "/orders/new" kena aturannya sendiri, bukan aturan "/orders".
 export function rolesForPath(pathname = "") {
-  const base = Object.keys(ROUTE_ACCESS).find(
-    (p) => pathname === p || pathname.startsWith(`${p}/`)
-  );
+  const base = Object.keys(ROUTE_ACCESS)
+    .filter((p) => pathname === p || pathname.startsWith(`${p}/`))
+    .sort((a, b) => b.length - a.length)[0];
   return base ? ROUTE_ACCESS[base] : null;
 }
 

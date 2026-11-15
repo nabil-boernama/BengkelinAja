@@ -9,10 +9,10 @@ import PageBackground from "@/components/layout/PageBackground";
 // Urutan dan label mengikuti prototype (assets/app.js). Menu disaring per peran lewat lib/access.js.
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/orders", label: "Order", mekanikLabel: "Order Saya" },
+  { href: "/orders", label: "Daftar Order", mekanikLabel: "Order Saya" },
   { href: "/orders/new", label: "Order Baru" },
-  { href: "/customers", label: "Riwayat" },
-  { href: "/parts", label: "Stok" },
+  { href: "/customers", label: "Riwayat Pelanggan" },
+  { href: "/parts", label: "Stok Suku Cadang" },
 ];
 
 /**

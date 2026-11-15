@@ -22,6 +22,8 @@ const listOrdersQuerySchema = z.object({
   status: z.enum(statusValues).optional(),
   plat: z.string().trim().max(15).optional(),
   tanggal: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  // aktif=1: hanya order aktif (belum Diambil/Dibatalkan, atau Diambil/Dibatalkan hari ini)
+  aktif: z.enum(['0', '1']).optional(),
 });
 
 const orderIdParamSchema = z.object({ id: objectId });

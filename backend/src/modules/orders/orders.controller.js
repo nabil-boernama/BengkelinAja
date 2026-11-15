@@ -75,12 +75,20 @@ const create = asyncHandler(async (req, res) => {
 
 // GET /orders?status=&plat=: daftar order (FR-12). Mekanik hanya lihat order miliknya.
 const list = asyncHandler(async (req, res) => {
-  const { status, plat, tanggal } = req.query;
+  const { status, plat, tanggal, aktif } = req.query;
   const filter = {};
   if (status) filter.status = status;
   if (plat) filter.plat = { $regex: String(plat).replace(/\s+/g, ''), $options: 'i' };
   if (tanggal) filter.tanggal_key = tanggal;
   if (req.user.peran === ROLES.MEKANIK) filter.mekanik = req.user._id;
+  // Order aktif: status belum final (kapan pun), atau sudah Diambil/Dibatalkan tapi masih hari ini.
+  // Order final dari hari sebelumnya hanya bisa diakses lewat riwayat pelanggan.
+  if (aktif === '1') {
+    filter.$or = [
+      { status: { $nin: [ORDER_STATUS.DIAMBIL, ORDER_STATUS.DIBATALKAN] } },
+      { tanggal_key: dateKey() },
+    ];
+  }
 
   const orders = await Order.find(filter)
     .sort({ tanggal_key: -1, no_antrean: -1 })

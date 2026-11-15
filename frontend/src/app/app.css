@@ -62,6 +62,11 @@ select.in{appearance:none;background-image:linear-gradient(45deg,transparent 50%
 .sc3 .k{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;opacity:.85}.sc3 .v{font-size:44px;font-weight:800;line-height:1.15;font-variant-numeric:tabular-nums}
 .sc3 .r{background:var(--red);color:#fff}.sc3 .s{background:var(--s7);color:#fff}.sc3 .m{background:var(--mist);color:var(--ink)}
 .filters{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:20px}.filters .in{height:48px;max-width:260px}
+.in-clr{position:relative;display:flex;align-items:center;max-width:260px;width:100%}.in-clr .in{max-width:none;padding-right:52px}
+.in-clr .in::-webkit-search-cancel-button{display:none;-webkit-appearance:none}
+.in-clr .in::-webkit-calendar-picker-indicator{filter:invert(1);cursor:pointer}
+.in-clr-x{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:24px;height:24px;display:grid;place-items:center;border:0;background:transparent;color:#fff;cursor:pointer;padding:0;border-radius:50%}.in-clr-x:hover{background:rgba(255,255,255,.1)}.in-clr-x svg{width:16px;height:16px}
+.in-clr-date .in-clr-x{right:44px}
 .stamp{margin-left:auto;display:flex;gap:10px;align-items:center;color:var(--mist);font-size:13px}
 /* tabel */
 .tw{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14.5px}

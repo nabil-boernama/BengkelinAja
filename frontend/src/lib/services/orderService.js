@@ -4,8 +4,8 @@
 import { getOrder, listOrders, updateOrderStatus as patchOrderStatus } from "@/services/ordersService";
 
 // GET /api/orders?status=&plat=
-export async function getOrders({ status, plat, tanggal } = {}) {
-  return listOrders({ status, plat, tanggal });
+export async function getOrders({ status, plat, tanggal, aktif } = {}) {
+  return listOrders({ status, plat, tanggal, aktif });
 }
 
 // GET /api/orders/:id -> order + items (rincian suku cadang) + total_biaya
