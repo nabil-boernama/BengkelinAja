@@ -8,6 +8,7 @@ router.use("/orders", require("../modules/orders/notify.routes"));
 router.use("/orders", require("../modules/receipts/receipts.routes"));
 router.use("/parts", require("../modules/parts/parts.routes"));
 router.use("/reports", require("../modules/reports/reports.routes"));
+router.use("/staff", require("../modules/staff/staff.routes"));
 router.use("/track", require("../modules/tracking/tracking.routes"));
 
 module.exports = router;

@@ -6,6 +6,7 @@ export const ROUTE_ACCESS = {
   "/customers": ["admin", "mekanik", "owner"],
   "/parts": ["admin", "mekanik", "owner"], // Mekanik & Owner: hanya lihat
   "/dashboard": ["owner"],
+  "/staff": ["owner"],                    // Kelola Staf: hanya owner
 };
 
 export const ROLE_LABEL = {
