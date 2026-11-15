@@ -4,6 +4,10 @@ const searchQuerySchema = z.object({
   q: z.string().trim().max(50).optional(),
 });
 
+const plateSearchQuerySchema = z.object({
+  q: z.string().trim().max(15).optional(),
+});
+
 const objectIdParamSchema = z.object({
   id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'ID tidak valid'),
 });
@@ -14,7 +18,14 @@ const updateCustomerSchema = z
     // string kosong berarti hapus nomor
     no_wa: z
       .union([
-        z.string().trim().regex(/^\+?[0-9\s-]{8,20}$/, 'Nomor WhatsApp tidak valid'),
+        z
+          .string()
+          .trim()
+          .refine(
+            (value) => /^\+?[0-9\s-]+$/.test(value) && value.replace(/\D/g, '').length >= 8 && value.replace(/\D/g, '').length <= 13,
+            'Nomor WhatsApp harus berisi 8 sampai 13 digit'
+          )
+          .transform((value) => value.replace(/\D/g, '')),
         z.literal(''),
       ])
       .optional(),
@@ -23,4 +34,9 @@ const updateCustomerSchema = z
     message: 'Minimal satu field harus diisi',
   });
 
-module.exports = { searchQuerySchema, objectIdParamSchema, updateCustomerSchema };
+module.exports = {
+  searchQuerySchema,
+  plateSearchQuerySchema,
+  objectIdParamSchema,
+  updateCustomerSchema,
+};

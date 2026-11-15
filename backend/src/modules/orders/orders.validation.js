@@ -3,17 +3,30 @@ const { ORDER_STATUS } = require('../../constants');
 
 const objectId = z.string().regex(/^[0-9a-fA-F]{24}$/, 'ID tidak valid');
 const statusValues = Object.values(ORDER_STATUS);
+const plat = z
+  .string()
+  .trim()
+  .max(15)
+  .regex(/^[A-Z]{1,2}\s*\d{1,4}(?:\s*[A-Z]{1,3})?$/i, 'Format plat nomor tidak valid');
+const noWa = z
+  .string()
+  .trim()
+  .refine(
+    (value) => /^\+?[0-9\s-]+$/.test(value) && value.replace(/\D/g, '').length >= 8 && value.replace(/\D/g, '').length <= 13,
+    'Nomor WhatsApp harus berisi 8 sampai 13 digit'
+  )
+  .transform((value) => value.replace(/\D/g, ''));
 
 const createOrderSchema = z.object({
-  // Pelanggan lama: { id }. Pelanggan baru: { nama, no_wa? }.
+  // Pelanggan lama: { id }. Pelanggan baru: { nama, no_wa }.
   customer: z.union([
     z.object({ id: objectId }),
     z.object({
       nama: z.string().trim().min(1, 'Nama pelanggan wajib diisi').max(100),
-      no_wa: z.string().trim().max(20).optional(),
+      no_wa: noWa,
     }),
   ]),
-  plat: z.string().trim().min(3, 'Plat nomor tidak valid').max(15),
+  plat,
   keluhan: z.string().trim().min(1, 'Keluhan wajib diisi').max(500),
   mekanik: objectId,
 });
@@ -45,7 +58,7 @@ const recordServiceSchema = z.object({
 // PATCH /orders/:id: ubah detail order (minimal satu field)
 const updateOrderSchema = z
   .object({
-    plat: z.string().trim().min(3, 'Plat nomor tidak valid').max(15).optional(),
+    plat: plat.optional(),
     keluhan: z.string().trim().min(1, 'Keluhan wajib diisi').max(500).optional(),
     mekanik: objectId.optional(),
   })
