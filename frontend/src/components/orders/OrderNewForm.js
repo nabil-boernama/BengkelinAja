@@ -11,6 +11,7 @@ import {
   getMechanicWorkload,
   listOrders,
 } from "@/services/ordersService";
+import { searchCustomerPlates } from "@/services/customersService";
 import ActivePlatWarning from "./ActivePlatWarning";
 import CustomerSearchCards from "./CustomerSearchCards";
 import styles from "./orderNew.module.css";
@@ -24,6 +25,7 @@ const INITIAL = {
   search: "",
   selectedId: "",
   selectedNama: "",
+  selectedNoWa: "",
   plat: "",
   keluhan: "",
   mekanik: "",
@@ -48,6 +50,19 @@ function isActiveOrder(order) {
   return order && !FINAL_STATUS.has(order.status);
 }
 
+function formatPlatInput(value) {
+  const normalized = String(value).toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const prefix = normalized.match(/^[A-Z]{1,2}/)?.[0] || "";
+  const rest = normalized.slice(prefix.length);
+  const digits = rest.match(/^\d{1,4}/)?.[0] || "";
+  const suffix = rest.slice(digits.length).replace(/[^A-Z]/g, "").slice(0, 3);
+  return [prefix, digits, suffix].filter(Boolean).join(" ");
+}
+
+function normalizePhone(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
 /**
  * Form buat order: pelanggan baru/lama, plat, keluhan, mekanik.
  * onSuccess(order, { typedNama, mode }) dipanggil setelah POST berhasil.
@@ -65,6 +80,10 @@ export default function OrderNewForm({ onSuccess }) {
 
   const [activeOrder, setActiveOrder] = useState(null);
   const [activeForPlat, setActiveForPlat] = useState("");
+  const [plateSuggestions, setPlateSuggestions] = useState([]);
+  const [plateSuggestionsFor, setPlateSuggestionsFor] = useState("");
+  const [plateSuggestionsError, setPlateSuggestionsError] = useState("");
+  const [selectedPlateLoading, setSelectedPlateLoading] = useState(false);
   const debouncedPlat = useDebounce(form.plat, 400);
 
   // Muat daftar mekanik + jumlah order aktif (ORD-5)
@@ -110,6 +129,41 @@ export default function OrderNewForm({ onSuccess }) {
   const platKey = String(debouncedPlat || "")
     .replace(/\s+/g, "")
     .toUpperCase();
+  const currentPlatKey = String(form.plat || "")
+    .replace(/\s+/g, "")
+    .toUpperCase();
+
+  useEffect(() => {
+    if (form.mode !== "lama" || !platKey) {
+      setPlateSuggestions([]);
+      setPlateSuggestionsFor("");
+      setPlateSuggestionsError("");
+      return undefined;
+    }
+
+    let cancelled = false;
+    setPlateSuggestionsError("");
+    searchCustomerPlates(platKey)
+      .then((data) => {
+        if (cancelled) return;
+        setPlateSuggestions(Array.isArray(data) ? data : []);
+        setPlateSuggestionsFor(platKey);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setPlateSuggestions([]);
+        setPlateSuggestionsFor(platKey);
+        setPlateSuggestionsError(
+          err instanceof ApiError
+            ? err.message
+            : "Gagal memuat saran plat nomor."
+        );
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [form.mode, platKey]);
 
   useEffect(() => {
     if (platKey.length < 3) return undefined;
@@ -142,18 +196,30 @@ export default function OrderNewForm({ onSuccess }) {
   }
 
   function setMode(mode) {
+    if (mode === form.mode) return;
     setErrors({});
-    patch({
+    setPlateSuggestionsFor("");
+    setForm((prev) => ({
+      ...prev,
       mode,
-      selectedId: mode === "baru" ? "" : form.selectedId,
-      selectedNama: mode === "baru" ? "" : form.selectedNama,
-    });
+      nama: "",
+      no_wa: "",
+      search: "",
+      selectedId: "",
+      selectedNama: "",
+      selectedNoWa: "",
+      plat: "",
+      keluhan: "",
+    }));
   }
 
   function validate() {
     const next = {};
     const plat = form.plat.trim();
     const keluhan = form.keluhan.trim();
+    const noWa = normalizePhone(
+      form.mode === "baru" ? form.no_wa : form.selectedNoWa
+    );
 
     if (form.mode === "baru") {
       const nama = form.nama.trim();
@@ -161,8 +227,15 @@ export default function OrderNewForm({ onSuccess }) {
       else if (nama.length > 100) next.nama = "Nama pelanggan maksimal 100 karakter";
     }
 
+    if (!noWa) next.no_wa = "Nomor WhatsApp wajib diisi";
+    else if (noWa.length < 8 || noWa.length > 13) {
+      next.no_wa = "Nomor WhatsApp harus berisi 8 sampai 13 digit";
+    }
+
     if (!plat) next.plat = "Plat nomor wajib diisi";
-    else if (plat.length < 3 || plat.length > 15) next.plat = "Plat nomor tidak valid";
+    else if (!/^[A-Z]{1,2}\s+\d{1,4}(?:\s+[A-Z]{1,3})?$/i.test(plat)) {
+      next.plat = "Gunakan format plat Indonesia, misalnya AB 1234 CD";
+    }
 
     if (!keluhan) next.keluhan = "Keluhan wajib diisi";
     else if (keluhan.length > 500) next.keluhan = "Keluhan maksimal 500 karakter";
@@ -197,10 +270,10 @@ export default function OrderNewForm({ onSuccess }) {
     if (form.mode === "lama") {
       payload.customer = { id: form.selectedId };
     } else {
-      const customer = { nama: typedNama };
-      const wa = form.no_wa.trim();
-      if (wa) customer.no_wa = wa;
-      payload.customer = customer;
+      payload.customer = {
+        nama: typedNama,
+        no_wa: normalizePhone(form.no_wa),
+      };
     }
 
     setSubmitting(true);
@@ -216,13 +289,15 @@ export default function OrderNewForm({ onSuccess }) {
           // Backend field bisa "customer.nama" atau "plat"
           const key = String(item.field).includes("nama")
             ? "nama"
-            : String(item.field).includes("mekanik")
-              ? "mekanik"
-              : String(item.field).includes("keluhan")
-                ? "keluhan"
-                : String(item.field).includes("plat")
-                  ? "plat"
-                  : item.field;
+            : String(item.field).includes("no_wa")
+              ? "no_wa"
+              : String(item.field).includes("mekanik")
+                ? "mekanik"
+                : String(item.field).includes("keluhan")
+                  ? "keluhan"
+                  : String(item.field).includes("plat")
+                    ? "plat"
+                    : item.field;
           fieldMap[key] = item.message;
         }
         if (Object.keys(fieldMap).length) {
@@ -230,6 +305,8 @@ export default function OrderNewForm({ onSuccess }) {
         } else {
           toast.error(err.message || "Gagal membuat order.");
         }
+      } else if (err instanceof ApiError && err.status === 409) {
+        setErrors((prev) => ({ ...prev, no_wa: err.message }));
       } else {
         toast.error(
           err instanceof ApiError
@@ -240,6 +317,52 @@ export default function OrderNewForm({ onSuccess }) {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  async function selectRegisteredPlate(plate) {
+    setSelectedPlateLoading(true);
+    setPlateSuggestionsFor("");
+    setPlateSuggestionsError("");
+    try {
+      const orders = await listOrders({ plat: plate });
+      const latest = Array.isArray(orders) ? orders[0] : null;
+      if (!latest?.customer?._id) {
+        throw new Error("Data pelanggan untuk plat tersebut tidak ditemukan.");
+      }
+      patch({
+        selectedId: latest.customer._id,
+        selectedNama: latest.customer.nama || "",
+        selectedNoWa: normalizePhone(latest.customer.no_wa),
+        nama: latest.customer.nama || "",
+        no_wa: normalizePhone(latest.customer.no_wa),
+        search: latest.customer.nama || "",
+        plat: formatPlatInput(plate),
+      });
+      setErrors((prev) => ({ ...prev, no_wa: "" }));
+    } catch (err) {
+      setPlateSuggestionsError(
+        err instanceof ApiError
+          ? err.message
+          : err.message || "Gagal memilih plat nomor."
+      );
+    } finally {
+      setSelectedPlateLoading(false);
+    }
+  }
+
+  function selectCustomer(customer) {
+    setPlateSuggestionsFor("");
+    patch({
+      selectedId: customer._id,
+      selectedNama: customer.nama || "",
+      selectedNoWa: normalizePhone(customer.no_wa),
+      nama: customer.nama || "",
+      no_wa: normalizePhone(customer.no_wa),
+      plat: customer.plat_terakhir
+        ? formatPlatInput(customer.plat_terakhir)
+        : form.plat,
+    });
+    setErrors((prev) => ({ ...prev, no_wa: "" }));
   }
 
   const keluhanLen = form.keluhan.length;
@@ -276,63 +399,123 @@ export default function OrderNewForm({ onSuccess }) {
               value={form.nama}
               maxLength={100}
               placeholder="Budi Santoso"
+              required
               onChange={(e) => {
                 patch({ nama: e.target.value });
                 if (errors.nama) setErrors((p) => ({ ...p, nama: "" }));
               }}
               autoComplete="name"
             />
-            {errors.nama ? <div className="err">{errors.nama}</div> : null}
+            {errors.nama ? <div className="err on" role="alert">{errors.nama}</div> : null}
           </label>
 
           <label className="fld">
-            <span>Nomor WhatsApp (opsional)</span>
+            <span>Nomor WhatsApp</span>
             <input
               className="in"
               value={form.no_wa}
-              maxLength={20}
-              placeholder="0812 3456 7890"
+              maxLength={13}
+              placeholder="081234567890"
               inputMode="tel"
-              onChange={(e) => patch({ no_wa: e.target.value })}
+              required
+              onChange={(e) => {
+                patch({ no_wa: normalizePhone(e.target.value).slice(0, 13) });
+                if (errors.no_wa) setErrors((prev) => ({ ...prev, no_wa: "" }));
+              }}
               autoComplete="tel"
             />
             <div className="help">
-              Awali dengan 08 atau 62. Dipakai untuk pemberitahuan WhatsApp dan
-              mencocokkan riwayat.
+              Masukkan 8–13 digit. Nomor harus unik untuk setiap pelanggan.
             </div>
+            {errors.no_wa ? <div className="err on" role="alert">{errors.no_wa}</div> : null}
           </label>
+        </div>
+      ) : form.selectedId ? (
+        <div className="cc" style={{ marginBottom: 20 }}>
+          <div className="muted small">Pelanggan dipilih</div>
+          <b>{form.selectedNama}</b>
+          <div className="muted">
+            {form.selectedNoWa || "Nomor WhatsApp belum terdaftar"}
+          </div>
+          <button
+            type="button"
+            className="b b-g sm"
+            style={{ marginTop: 12 }}
+            onClick={() => patch({
+              selectedId: "",
+              selectedNama: "",
+              selectedNoWa: "",
+              nama: "",
+              no_wa: "",
+              search: "",
+            })}
+          >
+            Ganti pelanggan
+          </button>
         </div>
       ) : (
         <CustomerSearchCards
           query={form.search}
           onQueryChange={(search) => patch({ search })}
           selectedId={form.selectedId}
-          onSelect={(c) =>
-            patch({
-              selectedId: c._id,
-              selectedNama: c.nama || "",
-            })
-          }
+          onSelect={selectCustomer}
         />
       )}
 
+      {form.mode === "lama" && errors.no_wa ? (
+        <div className="err on" role="alert" style={{ marginTop: -12, marginBottom: 20 }}>
+          {errors.no_wa}
+        </div>
+      ) : null}
       <label className="fld">
         <span>Plat nomor</span>
         <input
           className="in"
           value={form.plat}
-          maxLength={15}
+          maxLength={11}
           placeholder="AB 1234 CD"
+          required
           style={{ textTransform: "uppercase" }}
           onChange={(e) => {
-            patch({ plat: e.target.value.toUpperCase() });
+            patch({ plat: formatPlatInput(e.target.value) });
             if (errors.plat) setErrors((p) => ({ ...p, plat: "" }));
           }}
           autoComplete="off"
         />
-        <ActivePlatWarning order={shownActiveOrder} />
-        {errors.plat ? <div className="err">{errors.plat}</div> : null}
       </label>
+      {form.mode === "lama" &&
+      plateSuggestionsFor === platKey &&
+      platKey === currentPlatKey &&
+      plateSuggestions.length > 0 ? (
+        <div
+          className={`cards ${styles.cards}`}
+          role="listbox"
+          aria-label="Plat yang pernah didaftarkan"
+        >
+          {plateSuggestions.map(({ plat }) => (
+            <button
+              key={plat}
+              type="button"
+              className="cc"
+              role="option"
+              aria-selected={currentPlatKey === plat}
+              style={{ textAlign: "left", cursor: "pointer", padding: "12px 16px" }}
+              disabled={selectedPlateLoading}
+              onClick={() => selectRegisteredPlate(plat)}
+            >
+              {formatPlatInput(plat)}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      {form.mode === "lama" && plateSuggestionsError ? (
+        <div className="err on" role="alert">{plateSuggestionsError}</div>
+      ) : null}
+      {form.mode === "lama" && selectedPlateLoading ? (
+        <div className="help" role="status">Memuat data pelanggan…</div>
+      ) : null}
+      <ActivePlatWarning order={shownActiveOrder} />
+      {errors.plat ? <div className="err on" role="alert">{errors.plat}</div> : null}
 
       <label className="fld">
         <span>Keluhan</span>
@@ -342,6 +525,7 @@ export default function OrderNewForm({ onSuccess }) {
           maxLength={500}
           placeholder="Jelaskan keluhan motor"
           rows={4}
+          required
           onChange={(e) => {
             patch({ keluhan: e.target.value.slice(0, 500) });
             if (errors.keluhan) setErrors((p) => ({ ...p, keluhan: "" }));
@@ -350,7 +534,7 @@ export default function OrderNewForm({ onSuccess }) {
         <div className="help">
           {keluhanLen} / 500
         </div>
-        {errors.keluhan ? <div className="err">{errors.keluhan}</div> : null}
+        {errors.keluhan ? <div className="err on" role="alert">{errors.keluhan}</div> : null}
       </label>
 
       <label className="fld">
@@ -361,6 +545,7 @@ export default function OrderNewForm({ onSuccess }) {
           <select
             className="in"
             value={form.mekanik}
+            required
             onChange={(e) => {
               patch({ mekanik: e.target.value });
               if (errors.mekanik) setErrors((p) => ({ ...p, mekanik: "" }));
@@ -380,8 +565,8 @@ export default function OrderNewForm({ onSuccess }) {
             })}
           </select>
         )}
-        {mechanicsError ? <div className="err">{mechanicsError}</div> : null}
-        {errors.mekanik ? <div className="err">{errors.mekanik}</div> : null}
+        {mechanicsError ? <div className="err on" role="alert">{mechanicsError}</div> : null}
+        {errors.mekanik ? <div className="err on" role="alert">{errors.mekanik}</div> : null}
       </label>
 
       <div className="row">

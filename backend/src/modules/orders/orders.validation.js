@@ -3,17 +3,33 @@ const { ORDER_STATUS } = require('../../constants');
 
 const objectId = z.string().regex(/^[0-9a-fA-F]{24}$/, 'ID tidak valid');
 const statusValues = Object.values(ORDER_STATUS);
+const plat = z
+  .string()
+  .trim()
+  .max(15)
+  .regex(/^[A-Z]{1,2}\s*\d{1,4}(?:\s*[A-Z]{1,3})?$/i, 'Format plat nomor tidak valid');
+// Nomor WA: hanya angka, spasi, strip, dan "+" di depan; 8 sampai 13 digit
+const isValidWa = (value) =>
+  /^\+?[0-9\s-]+$/.test(value) &&
+  value.replace(/\D/g, '').length >= 8 &&
+  value.replace(/\D/g, '').length <= 13;
+const WA_MESSAGE = 'Nomor WhatsApp harus berisi 8 sampai 13 digit';
+const noWa = z
+  .string()
+  .trim()
+  .refine(isValidWa, WA_MESSAGE)
+  .transform((value) => value.replace(/\D/g, ''));
 
 const createOrderSchema = z.object({
-  // Pelanggan lama: { id }. Pelanggan baru: { nama, no_wa? }.
+  // Pelanggan lama: { id }. Pelanggan baru: { nama, no_wa }.
   customer: z.union([
     z.object({ id: objectId }),
     z.object({
       nama: z.string().trim().min(1, 'Nama pelanggan wajib diisi').max(100),
-      no_wa: z.string().trim().max(20).optional(),
+      no_wa: noWa,
     }),
   ]),
-  plat: z.string().trim().min(3, 'Plat nomor tidak valid').max(15),
+  plat,
   keluhan: z.string().trim().min(1, 'Keluhan wajib diisi').max(500),
   mekanik: objectId,
 });
@@ -53,15 +69,18 @@ const updateOrderSchema = z
     customer: z
       .object({
         nama: z.string().trim().min(1, 'Nama pelanggan wajib diisi').max(100).optional(),
+        // maks 20 karakter (termasuk spasi/strip), 8-13 digit, disimpan sebagai digit saja
         no_wa: z
-          .union([
-            z.string().trim().regex(/^\+?[0-9\s-]{8,20}$/, 'Nomor WhatsApp tidak valid'),
-            z.literal(''),
-          ])
+          .string()
+          .trim()
+          .max(20, 'Nomor WhatsApp tidak valid')
+          .refine((value) => value === '' || isValidWa(value), WA_MESSAGE)
+          .transform((value) => value.replace(/\D/g, ''))
           .optional(),
       })
       .optional(),
-    plat: z.string().trim().min(3, 'Plat nomor tidak valid').max(15).optional(),
+    // format plat Indonesia (mis. AB 1234 CD), minimal 3 karakter
+    plat: plat.min(3, 'Plat nomor tidak valid').optional(),
     keluhan: z.string().trim().min(1, 'Keluhan wajib diisi').max(500).optional(),
     mekanik: objectId.optional(),
   })

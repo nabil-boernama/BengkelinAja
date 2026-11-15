@@ -2,6 +2,7 @@ const router = require('express').Router();
 const controller = require('./customers.controller');
 const {
   searchQuerySchema,
+  plateSearchQuerySchema,
   objectIdParamSchema,
   updateCustomerSchema,
 } = require('./customers.validation');
@@ -15,6 +16,14 @@ router.get(
   authorize(ROLES.ADMIN, ROLES.MEKANIK, ROLES.OWNER),
   validate(searchQuerySchema, 'query'),
   controller.search
+);
+
+router.get(
+  '/plates',
+  authenticate,
+  authorize(ROLES.ADMIN, ROLES.MEKANIK, ROLES.OWNER),
+  validate(plateSearchQuerySchema, 'query'),
+  controller.plates
 );
 
 router.get(

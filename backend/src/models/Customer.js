@@ -3,8 +3,11 @@ const mongoose = require('mongoose');
 const customerSchema = new mongoose.Schema(
   {
     nama: { type: String, required: true, trim: true },
-    // no_wa boleh kosong (NFR Reliability), tapi kalau ada harus unik
-    no_wa: { type: String, trim: true },
+    no_wa: {
+      type: String,
+      trim: true,
+      set: (value) => (value == null ? value : String(value).replace(/\D/g, '')),
+    },
   },
   { timestamps: true }
 );

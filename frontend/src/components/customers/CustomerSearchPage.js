@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import StatusMarker from "@/components/ui/StatusMarker";
-import { searchCustomers } from "@/services/customersService";
+import { searchCustomerPlates, searchCustomers } from "@/services/customersService";
 import { listOrders } from "@/services/ordersService";
 import useDebounce from "@/hooks/useDebounce";
 
@@ -25,8 +25,10 @@ function CustomerList({ q }) {
 
   useEffect(() => {
     if (!q) {
+      /* eslint-disable react-hooks/set-state-in-effect -- kosongkan hasil saat pencarian dikosongkan */
       setResult(null);
       setError(null);
+      /* eslint-enable react-hooks/set-state-in-effect */
       return;
     }
     let cancelled = false;
@@ -102,25 +104,26 @@ function CustomerList({ q }) {
 
 // ---- Tab Plat ----
 function PlatList({ q }) {
-  const [result, setResult] = useState(null);
+  const [plates, setPlates] = useState([]);
+  const [selectedPlate, setSelectedPlate] = useState("");
+  const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState(null);
 
   useEffect(() => {
-    if (!q) {
-      setResult(null);
-      setError(null);
-      return;
-    }
     let cancelled = false;
+    /* eslint-disable react-hooks/set-state-in-effect -- mulai permintaan jaringan */
     setLoading(true);
     setError(null);
-    listOrders({ plat: q })
+    /* eslint-enable react-hooks/set-state-in-effect */
+    searchCustomerPlates(q)
       .then((data) => {
-        if (!cancelled) setResult(Array.isArray(data) ? data : []);
+        if (!cancelled) setPlates(Array.isArray(data) ? data : []);
       })
       .catch((err) => {
-        if (!cancelled) setError(err.message || "Gagal memuat data order.");
+        if (!cancelled) setError(err.message || "Gagal memuat daftar plat.");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -128,9 +131,59 @@ function PlatList({ q }) {
     return () => { cancelled = true; };
   }, [q]);
 
-  if (!q) {
-    return <p className="muted">Ketik minimal 1 karakter.</p>;
+  async function openPlate(plate) {
+    setSelectedPlate(plate);
+    setDetailLoading(true);
+    setDetailError(null);
+    try {
+      const data = await listOrders({ plat: plate });
+      setOrders(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setDetailError(err.message || "Gagal memuat riwayat servis.");
+    } finally {
+      setDetailLoading(false);
+    }
   }
+
+  if (selectedPlate) {
+    return (
+      <section>
+        <button
+          type="button"
+          className="b b-g sm"
+          style={{ marginBottom: 16 }}
+          onClick={() => setSelectedPlate("")}
+        >
+          Kembali ke daftar plat
+        </button>
+        <h2 style={{ margin: "0 0 16px" }}>{selectedPlate}</h2>
+        {detailLoading && <p className="muted" role="status">Memuat riwayat…</p>}
+        {detailError && <p className="ermsg on" role="alert">{detailError}</p>}
+        {!detailLoading && !detailError && orders.length === 0 && (
+          <p className="muted">Belum ada riwayat untuk plat ini.</p>
+        )}
+        {!detailLoading && !detailError && orders.length > 0 && (
+          <div className="cards">
+            {orders.map((order) => (
+              <Link key={order._id} className="cc" href={`/orders/${encodeURIComponent(order._id)}`}>
+                <div className="row sp">
+                  <div>
+                    <b style={{ fontSize: 18 }}>#{order.no_antrean}</b>
+                    <div className="muted">
+                      {order.customer?.nama || "-"} | {order.mekanik?.nama || "-"}
+                    </div>
+                    {order.keluhan && <div>{order.keluhan}</div>}
+                  </div>
+                  {order.status && <StatusMarker status={order.status} />}
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+    );
+  }
+
   if (loading) {
     return (
       <div className="cards" aria-busy="true">
@@ -151,25 +204,20 @@ function PlatList({ q }) {
   if (error) {
     return <p className="ermsg on" role="alert">{error}</p>;
   }
-  if (result !== null && result.length === 0) {
-    return <p className="muted">Plat nomor tidak ditemukan.</p>;
-  }
-  if (!result) return null;
+  if (plates.length === 0) return <p className="muted">Plat nomor tidak ditemukan.</p>;
 
   return (
     <div className="cards">
-      {result.map((o) => (
-        <Link key={o._id} className="cc" href={`/orders/${encodeURIComponent(o._id)}`}>
-          <div className="row sp">
-            <div>
-              <b style={{ fontSize: 18 }}>{o.plat}</b>
-              <div className="muted">
-                #{o.no_antrean} | {o.customer?.nama || "-"} | {o.mekanik?.nama || "-"}
-              </div>
-            </div>
-            {o.status && <StatusMarker status={o.status} />}
-          </div>
-        </Link>
+      {plates.map(({ plat }) => (
+        <button
+          key={plat}
+          type="button"
+          className="cc"
+          style={{ color: "#fff", textAlign: "left", cursor: "pointer" }}
+          onClick={() => openPlate(plat)}
+        >
+          <b style={{ fontSize: 18 }}>{plat}</b>
+        </button>
       ))}
     </div>
   );
@@ -177,7 +225,7 @@ function PlatList({ q }) {
 
 // ---- Halaman utama ----
 export default function CustomerSearchPage() {
-  const [tab, setTab] = useState("c"); // "c" = pelanggan, "p" = plat
+  const [tab, setTab] = useState("p"); // "c" = pelanggan, "p" = plat
   const [input, setInput] = useState("");
   const q = useDebounce(input.trim(), 400);
 
@@ -223,6 +271,7 @@ export default function CustomerSearchPage() {
           autoCorrect="off"
           spellCheck={false}
           value={input}
+          maxLength={tab === "p" ? 15 : 50}
           onChange={(e) => setInput(e.target.value)}
         />
       </div>

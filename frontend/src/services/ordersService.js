@@ -13,7 +13,7 @@ export function getOrder(id) {
 }
 
 // POST /orders (Admin)
-// payload: { customer: { id } | { nama, no_wa? }, plat, keluhan, mekanik }
+// payload: { customer: { id } | { nama, no_wa }, plat, keluhan, mekanik }
 export function createOrder(payload) {
   return api.post("/orders", payload);
 }

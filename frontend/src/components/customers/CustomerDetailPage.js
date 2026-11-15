@@ -44,9 +44,11 @@ function UbahPelangganDialog({ customer, open, onClose, onSaved }) {
   // Isi form saat dialog dibuka
   useEffect(() => {
     if (open) {
+      /* eslint-disable react-hooks/set-state-in-effect -- isi dialog saat data pelanggan berubah */
       setNama(customer?.nama || "");
-      setNoWa(customer?.no_wa || "");
+      setNoWa((customer?.no_wa || "").replace(/\D/g, ""));
       setWaError("");
+      /* eslint-enable react-hooks/set-state-in-effect */
     }
   }, [open, customer]);
 
@@ -55,9 +57,10 @@ function UbahPelangganDialog({ customer, open, onClose, onSaved }) {
     const payload = {};
     const namaTrim = nama.trim();
     const waTrim = noWa.trim();
+    const currentWa = String(customer?.no_wa || "").replace(/\D/g, "");
     if (namaTrim) payload.nama = namaTrim;
     // Kirim no_wa meski kosong (artinya hapus nomor); hanya kalau ada perubahan
-    if (waTrim !== (customer?.no_wa || "").trim()) payload.no_wa = waTrim;
+    if (waTrim !== currentWa) payload.no_wa = waTrim;
 
     if (!namaTrim) {
       setWaError("Nama pelanggan tidak boleh kosong.");
@@ -110,8 +113,9 @@ function UbahPelangganDialog({ customer, open, onClose, onSaved }) {
         <input
           className="in"
           value={noWa}
-          maxLength={20}
-          onChange={(e) => { setNoWa(e.target.value); setWaError(""); }}
+          maxLength={13}
+          inputMode="tel"
+          onChange={(e) => { setNoWa(e.target.value.replace(/\D/g, "").slice(0, 13)); setWaError(""); }}
           disabled={saving}
         />
         {waError && <div className="err on">{waError}</div>}
@@ -178,7 +182,11 @@ export default function CustomerDetailPage() {
     }
   }, [customerId]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- muat data saat id pelanggan berubah */
+    load();
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [load]);
 
   // Perbarui data customer setelah dialog simpan berhasil
   const handleSaved = useCallback((updated) => {
