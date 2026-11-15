@@ -9,12 +9,12 @@ const WA_URL = "https://wa.me/6281371846810";
 
 const LAYANAN = [
   ["Ganti Aki", "ganti-aki.jpg"],
+  ["Ganti Oli", "ganti-oli.jpg"],
   ["Servis Berkala", "servis-berkala.jpg"],
   ["Servis CVT dan Transmisi", "servis-cvt-dan-transmisi.jpg"],
   ["Servis Kelistrikan", "servis-kelistrikan.jpg"],
   ["Servis Mesin", "servis-mesin.jpg"],
   ["Servis Rem", "servis-rem.jpg"],
-  ["Servis Suspensi", "servis-suspensi.jpg"],
   ["Tune Up Motor", "tune-up-motor.jpg"],
 ];
 
