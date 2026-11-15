@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import StaffLayout from "@/components/layout/StaffLayout";
@@ -11,15 +11,15 @@ import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/components/ui/Toast";
 import usePolling from "@/hooks/usePolling";
 import { getOrderById, updateOrderStatus } from "@/lib/services/orderService";
+import { recordService, cancelOrder } from "@/services/ordersService";
+import { listParts } from "@/services/partsService";
 import { formatRupiah, formatTanggal } from "@/lib/format";
 
 const POLL_MS = 30000;
 
-// Mengikuti aturan backend (PATCH /orders/:id/status):
-// - Mekanik: maju satu tahap, Antre -> Diperiksa -> Dikerjakan -> Selesai
-// - Admin: hanya Selesai -> Diambil
-// - Owner: hanya lihat
 const MEKANIK_NEXT = { Antre: "Diperiksa", Diperiksa: "Dikerjakan", Dikerjakan: "Selesai" };
+const FINAL_STATUS = ["Diambil", "Dibatalkan"];
+const CANCEL_ALLOWED = ["Antre", "Diperiksa"];
 
 function nextStatusOptions(role, status) {
   if (role === "mekanik" && MEKANIK_NEXT[status]) return [MEKANIK_NEXT[status]];
@@ -123,6 +123,255 @@ function Rincian({ order }) {
   );
 }
 
+function SearchableSelect({ parts, value, onChange, disabled }) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+
+  const selected = parts.find((p) => p._id === value);
+  const displayValue = open ? query : selected ? selected.nama : "";
+
+  const filtered = parts.filter((p) =>
+    p.nama.toLowerCase().includes(query.toLowerCase())
+  );
+
+  function handleSelect(part) {
+    onChange(part._id);
+    setQuery("");
+    setOpen(false);
+  }
+
+  return (
+    <div style={{ position: "relative" }}>
+      <input
+        type="text"
+        className="in"
+        value={displayValue}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setOpen(true);
+          if (!e.target.value) onChange("");
+        }}
+        onFocus={() => {
+          setQuery("");
+          setOpen(true);
+        }}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        disabled={disabled}
+        placeholder="Ketik nama suku cadang..."
+      />
+      {open && filtered.length > 0 && (
+        <div
+          style={{
+            position: "absolute",
+            top: "100%",
+            left: 0,
+            right: 0,
+            background: "#1e2528",
+            border: "1px solid #333",
+            borderRadius: 8,
+            zIndex: 100,
+            maxHeight: 200,
+            overflowY: "auto",
+          }}
+        >
+          {filtered.map((p) => (
+            <div
+              key={p._id}
+              onMouseDown={() => handleSelect(p)}
+              style={{
+                padding: "10px 14px",
+                cursor: "pointer",
+                borderBottom: "1px solid #2a2a2a",
+                fontSize: 14,
+              }}
+            >
+              {p.nama} (stok: {p.stok}) - {formatRupiah(p.harga)}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CatatServisForm({ orderId, initialItems, initialBiayaJasa, onSaved }) {
+  const toast = useToast();
+
+  const [parts, setParts] = useState([]);
+  const [loadingParts, setLoadingParts] = useState(true);
+
+  const [rows, setRows] = useState(() =>
+    Array.isArray(initialItems) && initialItems.length > 0
+      ? initialItems.map((it) => ({ part: it.part_id || "", jumlah: it.jumlah || 1 }))
+      : []
+  );
+  const [biayaJasa, setBiayaJasa] = useState(initialBiayaJasa ?? 0);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+
+  useEffect(() => {
+    listParts()
+      .then((data) => {
+        const list = Array.isArray(data) ? data : data?.data ?? [];
+        setParts(list);
+      })
+      .catch(() => setParts([]))
+      .finally(() => setLoadingParts(false));
+  }, []);
+
+  function addRow() {
+    setRows((prev) => [...prev, { part: "", jumlah: 1 }]);
+  }
+
+  function removeRow(idx) {
+    setRows((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  function updateRow(idx, field, value) {
+    setRows((prev) =>
+      prev.map((row, i) => (i === idx ? { ...row, [field]: value } : row))
+    );
+  }
+
+  async function handleSave() {
+    setSaveError("");
+
+    for (let i = 0; i < rows.length; i++) {
+      if (!rows[i].part) {
+        setSaveError(`Baris ${i + 1}: pilih suku cadang terlebih dahulu.`);
+        return;
+      }
+      if (!rows[i].jumlah || rows[i].jumlah < 1) {
+        setSaveError(`Baris ${i + 1}: jumlah minimal 1.`);
+        return;
+      }
+    }
+
+    const parsedBiaya = Number(biayaJasa);
+    if (isNaN(parsedBiaya) || parsedBiaya < 0) {
+      setSaveError("Biaya jasa tidak boleh negatif.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await recordService(orderId, {
+        items: rows.map((r) => ({ part: r.part, jumlah: Number(r.jumlah) })),
+        biaya_jasa: parsedBiaya,
+      });
+      toast.success("Rincian servis berhasil disimpan.");
+      onSaved();
+    } catch (err) {
+      setSaveError(err?.message || "Gagal menyimpan rincian servis.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="pn" style={{ marginTop: 20 }}>
+      <h2 style={{ marginBottom: 16 }}>Catat Rincian Servis</h2>
+
+      {loadingParts ? (
+        <p className="muted">Memuat daftar suku cadang...</p>
+      ) : (
+        <>
+          {rows.length === 0 && (
+            <p className="muted" style={{ marginBottom: 12 }}>
+              Belum ada suku cadang. Klik &ldquo;Tambah Suku Cadang&rdquo; untuk menambahkan.
+            </p>
+          )}
+
+          {rows.map((row, idx) => (
+            <div
+              key={idx}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 90px auto",
+                gap: 10,
+                marginBottom: 10,
+                alignItems: "center",
+              }}
+            >
+              <SearchableSelect
+                parts={parts}
+                value={row.part}
+                onChange={(id) => updateRow(idx, "part", id)}
+                disabled={saving}
+              />
+
+              <input
+                type="number"
+                className="in"
+                min={1}
+                value={row.jumlah}
+                onChange={(e) => updateRow(idx, "jumlah", e.target.value)}
+                disabled={saving}
+                placeholder="Jml"
+                style={{ textAlign: "center" }}
+              />
+
+              <button
+                type="button"
+                className="b b-g sm"
+                onClick={() => removeRow(idx)}
+                disabled={saving}
+                aria-label="Hapus baris"
+                style={{ padding: "8px 12px" }}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+
+          <button
+            type="button"
+            className="b b-g sm"
+            onClick={addRow}
+            disabled={saving}
+            style={{ marginBottom: 20 }}
+          >
+            + Tambah Suku Cadang
+          </button>
+
+          <div className="fld" style={{ maxWidth: 300 }}>
+            <label htmlFor="biaya-jasa">
+              <span>Biaya jasa (Rp)</span>
+              <input
+                id="biaya-jasa"
+                type="number"
+                className="in"
+                min={0}
+                value={biayaJasa}
+                onChange={(e) => setBiayaJasa(e.target.value)}
+                disabled={saving}
+                placeholder="0"
+              />
+            </label>
+          </div>
+
+          {saveError && (
+            <div style={{ marginTop: 12 }}>
+              <ErrorMessage>{saveError}</ErrorMessage>
+            </div>
+          )}
+
+          <div className="row" style={{ marginTop: 16 }}>
+            <button
+              type="button"
+              className="b b-r"
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving ? "Menyimpan..." : "Simpan Rincian"}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function OrderDetailContent() {
   const { id } = useParams();
   const { role } = useAuth();
@@ -135,6 +384,10 @@ function OrderDetailContent() {
   const [target, setTarget] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [alasan, setAlasan] = useState("");
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState("");
 
   if (loading && !order) {
     return (
@@ -160,6 +413,7 @@ function OrderDetailContent() {
   const status = order.status;
   const options = nextStatusOptions(role, status);
   const cancelled = status === "Dibatalkan";
+  const isFinal = FINAL_STATUS.includes(status);
 
   function openDialog() {
     setTarget(options[0]);
@@ -180,6 +434,25 @@ function OrderDetailContent() {
       setSaveError(err?.message || "Gagal mengubah status.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleCancel() {
+    if (!alasan.trim()) {
+      setCancelError("Alasan pembatalan wajib diisi.");
+      return;
+    }
+    setCancelling(true);
+    setCancelError("");
+    try {
+      await cancelOrder(order._id, alasan.trim());
+      toast.success(`Order #${order.no_antrean} berhasil dibatalkan.`);
+      setCancelOpen(false);
+      refresh();
+    } catch (err) {
+      setCancelError(err?.message || "Gagal membatalkan order.");
+    } finally {
+      setCancelling(false);
     }
   }
 
@@ -243,10 +516,33 @@ function OrderDetailContent() {
         </div>
       </div>
 
+      {role === "admin" && !isFinal && (
+        <CatatServisForm
+          key={order._id}
+          orderId={order._id}
+          initialItems={order.items}
+          initialBiayaJasa={order.biaya_jasa}
+          onSaved={refresh}
+        />
+      )}
+
       <div className="row" style={{ marginTop: 24 }}>
         {options.length > 0 && (
           <button type="button" className="b b-r" onClick={openDialog}>
             Ubah Status
+          </button>
+        )}
+        {role === "admin" && CANCEL_ALLOWED.includes(status) && (
+          <button
+            type="button"
+            className="b b-g"
+            onClick={() => {
+              setAlasan("");
+              setCancelError("");
+              setCancelOpen(true);
+            }}
+          >
+            Batalkan Order
           </button>
         )}
         <Link className="b b-g" href="/orders">
@@ -286,6 +582,30 @@ function OrderDetailContent() {
           </select>
         </label>
         {saveError && <ErrorMessage>{saveError}</ErrorMessage>}
+      </Dialog>
+
+      <Dialog
+        open={cancelOpen}
+        title="Batalkan order"
+        message={`Order #${order.no_antrean} (${order.plat}) akan dibatalkan. Tindakan ini tidak bisa diurungkan.`}
+        confirmLabel="Ya, Batalkan"
+        loading={cancelling}
+        onConfirm={handleCancel}
+        onCancel={() => setCancelOpen(false)}
+      >
+        <label className="fld" htmlFor="alasan-batal">
+          <span>Alasan pembatalan</span>
+          <input
+            id="alasan-batal"
+            type="text"
+            className="in"
+            value={alasan}
+            onChange={(e) => setAlasan(e.target.value)}
+            disabled={cancelling}
+            placeholder="Contoh: pelanggan tidak jadi servis"
+          />
+        </label>
+        {cancelError && <ErrorMessage>{cancelError}</ErrorMessage>}
       </Dialog>
     </>
   );
