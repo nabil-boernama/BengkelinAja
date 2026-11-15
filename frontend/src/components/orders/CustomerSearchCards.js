@@ -59,8 +59,7 @@ export default function CustomerSearchCards({
     };
   }, [q]);
 
-  function handlePick(customer, e) {
-    e.preventDefault();
+  function handlePick(customer) {
     onSelect(customer);
   }
 
@@ -81,7 +80,7 @@ export default function CustomerSearchCards({
         />
       </label>
 
-      {error && showResults ? <div className="err">{error}</div> : null}
+      {error && showResults ? <div className="err on" role="alert">{error}</div> : null}
 
       {loading && q ? (
         <div className={`cards ${styles.cards}`} aria-busy="true">
@@ -101,16 +100,17 @@ export default function CustomerSearchCards({
           {list.map((c) => {
             const selected = selectedId === c._id;
             return (
-              <a
+              <button
                 key={c._id}
-                href="#"
+                type="button"
                 className={`cc ${selected ? styles.cardSelected : ""}`}
-                style={{ padding: "14px 20px" }}
-                onClick={(e) => handlePick(c, e)}
+                style={{ padding: "14px 20px", textAlign: "left", cursor: "pointer" }}
+                aria-pressed={selected}
+                onClick={() => handlePick(c)}
               >
                 <b>{c.nama}</b>
                 <div className="muted small">{c.no_wa || "Tanpa nomor WhatsApp"}</div>
-              </a>
+              </button>
             );
           })}
         </div>

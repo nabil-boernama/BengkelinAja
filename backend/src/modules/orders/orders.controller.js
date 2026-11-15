@@ -36,11 +36,32 @@ const create = asyncHandler(async (req, res) => {
   if (customerInput.id) {
     customer = await Customer.findById(customerInput.id);
     if (!customer) throw new AppError('Pelanggan tidak ditemukan', 404);
+    const digits = String(customer.no_wa || '').replace(/\D/g, '');
+    if (digits.length < 8 || digits.length > 13) {
+      throw new AppError(
+        'Nomor WhatsApp pelanggan harus berisi 8 sampai 13 digit. Perbarui data pelanggan terlebih dahulu.',
+        400
+      );
+    }
   } else {
-    // Pelanggan baru: cek dulu berdasarkan no_wa (NFR-07: no_wa unik) sebelum membuat baru
-    customer = customerInput.no_wa ? await Customer.findOne({ no_wa: customerInput.no_wa }) : null;
-    if (!customer) {
-      customer = await Customer.create({ nama: customerInput.nama, no_wa: customerInput.no_wa });
+    const digits = customerInput.no_wa.replace(/\D/g, '');
+    const formattedPhonePattern = new RegExp(
+      `^\\+?${digits.split('').join('[\\s-]*')}$`
+    );
+    const duplicate = await Customer.exists({
+      no_wa: { $regex: formattedPhonePattern },
+    });
+    if (duplicate) {
+      throw new AppError('Nomor WhatsApp sudah terdaftar. Pilih pelanggan lama.', 409);
+    }
+
+    try {
+      customer = await Customer.create({ nama: customerInput.nama, no_wa: digits });
+    } catch (err) {
+      if (err.code === 11000) {
+        throw new AppError('Nomor WhatsApp sudah terdaftar. Pilih pelanggan lama.', 409);
+      }
+      throw err;
     }
   }
 
