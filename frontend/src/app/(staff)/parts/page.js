@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import StaffLayout from "@/components/layout/StaffLayout";
 import { createPart, deletePart, listParts, updatePart } from "@/services/partsService";
 
 const RUPIAH = new Intl.NumberFormat("id-ID", {
@@ -198,7 +199,7 @@ export default function PartsPage() {
     }
   }
 
-  return (
+  const content = (
     <div>
       <div className="row sp" style={{ marginBottom: 24 }}>
         <h1
@@ -238,7 +239,7 @@ export default function PartsPage() {
       </div>
 
       {lowStockParts.length > 0 && (
-        <div className="warn" style={{ marginBottom: 20 }}>
+        <div className="warn on" style={{ marginBottom: 20 }}>
           <span>
             {lowStockParts.length} suku cadang hampir habis
           </span>
@@ -272,7 +273,7 @@ export default function PartsPage() {
         </p>
       )}
       {loadError && (
-        <div className="ermsg" role="alert" style={{ marginBottom: 16 }}>
+        <div className="ermsg on" role="alert" style={{ marginBottom: 16 }}>
           <span>{loadError}</span>
         </div>
       )}
@@ -290,12 +291,12 @@ export default function PartsPage() {
           </p>
         ) : (
           <div className="tw">
-            <table>
+            <table className="rs parts-table">
               <thead>
                 <tr>
                   <th>Nama</th>
-                  <th>Harga</th>
-                  <th>Stok</th>
+                  <th className="num">Harga</th>
+                  <th className="num">Stok</th>
                   <th>Batas minimum</th>
                   <th>Status</th>
                   {isAdmin && <th>Aksi</th>}
@@ -303,19 +304,26 @@ export default function PartsPage() {
               </thead>
               <tbody>
                 {filteredParts.map((part) => {
-                  const isLow = part.stok <= part.batas_minimum;
+                  const isEmpty = part.stok === 0;
+                  const isLow = !isEmpty && part.stok <= part.batas_minimum;
+                  const statusClass = isEmpty ? "emptyst" : isLow ? "lowst" : "okst";
+                  const statusLabel = isEmpty ? "HABIS" : isLow ? "MENIPIS" : "AMAN";
                   return (
                     <tr key={partId(part)}>
                       <td data-l="Nama">
                         <b>{part.nama}</b>
                       </td>
-                      <td data-l="Harga">{RUPIAH.format(part.harga)}</td>
-                      <td className="num" data-l="Stok">{part.stok}</td>
+                      <td className="num" data-l="Harga">
+                        <span className="part-value part-value-price">
+                          {RUPIAH.format(part.harga)}
+                        </span>
+                      </td>
+                      <td className="num" data-l="Stok">
+                        <span className="part-value part-value-stock">{part.stok}</span>
+                      </td>
                       <td data-l="Batas minimum">{part.batas_minimum}</td>
                       <td data-l="Status">
-                        <span className={isLow ? "lowst" : "okst"}>
-                          {isLow ? "MENIPIS" : "AMAN"}
-                        </span>
+                        <span className={statusClass}>{statusLabel}</span>
                       </td>
                       {isAdmin && (
                         <td data-l="Aksi">
@@ -348,7 +356,7 @@ export default function PartsPage() {
 
       {dialog === "form" && (
         <div
-          className="dlg"
+          className="dlg on"
           role="presentation"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) closeDialog();
@@ -416,7 +424,7 @@ export default function PartsPage() {
               </label>
 
               {actionError && (
-                <div className="ermsg" role="alert">
+                <div className="ermsg on" role="alert">
                   <span>{actionError}</span>
                 </div>
               )}
@@ -436,7 +444,7 @@ export default function PartsPage() {
 
       {dialog === "delete" && selectedPart && (
         <div
-          className="dlg"
+          className="dlg on"
           role="presentation"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) closeDialog();
@@ -448,7 +456,7 @@ export default function PartsPage() {
               Hapus suku cadang {selectedPart.nama}? Tindakan ini tidak dapat dibatalkan.
             </p>
             {actionError && (
-              <div className="ermsg" role="alert">
+              <div className="ermsg on" role="alert">
                 <span>{actionError}</span>
               </div>
             )}
@@ -465,4 +473,6 @@ export default function PartsPage() {
       )}
     </div>
   );
+
+  return <StaffLayout>{content}</StaffLayout>;
 }

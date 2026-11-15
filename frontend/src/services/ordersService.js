@@ -49,10 +49,15 @@ export function getNotifyLink(id) {
   return api.get(`/orders/${enc(id)}/notify-link`);
 }
 
-// GET /orders/:id/receipt (Admin), hanya untuk status Diambil -> Blob PDF
+// GET /orders/:id/receipt (Admin), status Selesai/Diambil -> Blob PDF
 export async function getReceiptPdf(id) {
   const res = await api.get(`/orders/${enc(id)}/receipt`, { raw: true });
   return res.blob();
+}
+
+// POST /orders/:id/receipt/send-whatsapp (Admin, order berstatus Selesai)
+export function sendReceiptToWhatsApp(id) {
+  return api.post(`/orders/${enc(id)}/receipt/send-whatsapp`, {});
 }
 
 // GET /mechanics/workload (Admin) -> [{ id, nama, order_aktif }]

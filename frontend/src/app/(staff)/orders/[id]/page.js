@@ -17,6 +17,7 @@ import {
   updateOrder,
   getMechanicWorkload,
   getReceiptPdf,
+  sendReceiptToWhatsApp,
 } from "@/services/ordersService";
 import { listParts } from "@/services/partsService";
 import { formatPlat, formatRupiah, formatTanggal } from "@/lib/format";
@@ -26,6 +27,7 @@ const DESKRIPSI_MAX = 500; // sama dengan batas di backend
 
 const MEKANIK_NEXT = { Antre: "Diperiksa", Diperiksa: "Dikerjakan", Dikerjakan: "Selesai" };
 const FINAL_STATUS = ["Diambil", "Dibatalkan"];
+const RECEIPT_AVAILABLE_STATUSES = ["Selesai", "Diambil"];
 const CANCEL_ALLOWED = ["Antre", "Diperiksa"];
 // Data order (pelanggan, kendaraan, keluhan, mekanik) hanya bisa diubah sebelum Selesai
 const EDIT_ALLOWED = ["Antre", "Diperiksa", "Dikerjakan"];
@@ -606,6 +608,7 @@ function OrderDetailContent() {
   const [cancelError, setCancelError] = useState("");
   const [editOpen, setEditOpen] = useState(false);
   const [printing, setPrinting] = useState(false);
+  const [sendingReceipt, setSendingReceipt] = useState(false);
 
   // Jangan tampilkan data order lain selama data order ini belum termuat
   if (order && String(order._id) !== String(id)) {
@@ -691,6 +694,19 @@ function OrderDetailContent() {
       toast.error(err?.message || "Gagal membuat struk.");
     } finally {
       setPrinting(false);
+    }
+  }
+
+  async function handleSendReceipt() {
+    if (sendingReceipt) return;
+    setSendingReceipt(true);
+    try {
+      const result = await sendReceiptToWhatsApp(order._id);
+      toast.success(result?.message || "Permintaan kirim struk diterima Fonnte.");
+    } catch (err) {
+      toast.error(err?.message || "Gagal mengirim struk ke WhatsApp.");
+    } finally {
+      setSendingReceipt(false);
     }
   }
 
@@ -786,9 +802,19 @@ function OrderDetailContent() {
       )}
 
       <div className="row" style={{ marginTop: 24 }}>
-        {role === "admin" && status === "Diambil" && (
+        {role === "admin" && RECEIPT_AVAILABLE_STATUSES.includes(status) && (
           <button type="button" className="b b-r" onClick={handlePrintReceipt} disabled={printing}>
             {printing ? "Menyiapkan Struk..." : "Cetak Struk"}
+          </button>
+        )}
+        {role === "admin" && status === "Selesai" && (
+          <button
+            type="button"
+            className="b b-g"
+            onClick={handleSendReceipt}
+            disabled={sendingReceipt}
+          >
+            {sendingReceipt ? "Mengirim Pesan..." : "Kirim Struk Teks ke WhatsApp"}
           </button>
         )}
         {role === "admin" && EDIT_ALLOWED.includes(status) && (
