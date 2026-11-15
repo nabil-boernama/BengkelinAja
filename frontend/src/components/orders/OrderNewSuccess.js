@@ -2,14 +2,13 @@
 
 import Link from "next/link";
 import styles from "./orderNew.module.css";
-import { formatPlat } from "@/lib/format";
 
 /**
  * Layar setelah order berhasil dibuat: nomor antrean besar + petunjuk ke pelanggan.
  */
 export default function OrderNewSuccess({ order, linkedNote, onCreateAnother }) {
   const no = order?.no_antrean;
-  const plat = order?.plat ? formatPlat(order.plat) : "";
+  const plat = order?.plat || "";
   const customerNama = order?.customer?.nama || "";
   const mekanikNama = order?.mekanik?.nama || "";
 
