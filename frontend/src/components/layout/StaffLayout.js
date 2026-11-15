@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { href: "/orders/new", label: "Order Baru" },
   { href: "/customers", label: "Riwayat Pelanggan" },
   { href: "/parts", label: "Stok Suku Cadang" },
+  { href: "/staff", label: "Kelola Staf" }, // Owner saja (lib/access.js)
 ];
 
 /**
