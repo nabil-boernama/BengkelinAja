@@ -10,11 +10,11 @@ export default function PublicLayout({ children }) {
           <img src="/logo.png" alt="BengkelinAja" />
         </Link>
         <nav>
-          <Link href="#home">Home</Link>
-          <Link href="#mengapa">Why Choose Us</Link>
-          <Link href="#layanan">Our Services</Link>
-          <Link href="#testimoni">Testimonials</Link>
-          <Link href="#kontak">Contact</Link>
+          <Link href="/#home">Home</Link>
+          <Link href="/#mengapa">Why Choose Us</Link>
+          <Link href="/#layanan">Our Services</Link>
+          <Link href="/#testimoni">Testimonials</Link>
+          <Link href="/#kontak">Contact</Link>
         </nav>
         <div className="navr">
           <Link href="/cek-status" className="b b-s">

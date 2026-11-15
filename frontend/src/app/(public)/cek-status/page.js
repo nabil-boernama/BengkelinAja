@@ -111,17 +111,7 @@ export default function CekStatusPage() {
   return (
     <>
       <PageBackground />
-      <main
-        style={{
-          position: "relative",
-          zIndex: 2,
-          minHeight: "100vh",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          padding: "120px 20px 60px",
-        }}
-      >
+      <main className="pub">
         <section className="pn" style={{ width: "100%", maxWidth: 520 }}>
           <h1
             className="font-display"
