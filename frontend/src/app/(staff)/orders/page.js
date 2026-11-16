@@ -71,7 +71,7 @@ function OrdersContent() {
     body = null; // gagal pada muatan pertama: pesan error tampil di atas tabel
   } else {
     body = orders.map((o) => (
-      <tr key={o._id}>
+      <tr key={o._id} data-status={o.status ?? ""}>
         <td className="num" data-l="No">
           #{o.no_antrean ?? "-"}
         </td>

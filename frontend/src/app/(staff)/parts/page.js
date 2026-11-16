@@ -202,15 +202,10 @@ export default function PartsPage() {
   const content = (
     <div>
       <div className="row sp" style={{ marginBottom: 24 }}>
-        <h1
-          className="font-display"
-          style={{ fontSize: "clamp(32px, 4vw, 48px)", lineHeight: 1.1 }}
-        >
-          Stok Suku Cadang
-        </h1>
+        <h1 className="pt">Stok Suku Cadang</h1>
         <div className="row">
           {isAdmin && (
-            <button className="b b-p" type="button" onClick={openAddDialog}>
+            <button className="b b-r" type="button" onClick={openAddDialog}>
               Tambah Suku Cadang
             </button>
           )}
@@ -294,9 +289,9 @@ export default function PartsPage() {
                   <th>Nama</th>
                   <th className="num">Harga</th>
                   <th className="num">Stok</th>
-                  <th>Batas minimum</th>
+                  <th className="ta-c">Batas minimum</th>
                   <th>Status</th>
-                  {isAdmin && <th>Aksi</th>}
+                  {isAdmin && <th className="ac">Aksi</th>}
                 </tr>
               </thead>
               <tbody>
@@ -307,7 +302,7 @@ export default function PartsPage() {
                   const statusLabel = isEmpty ? "HABIS" : isLow ? "MENIPIS" : "AMAN";
                   return (
                     <tr key={partId(part)}>
-                      <td data-l="Nama">
+                      <td className="nm" data-l="Nama">
                         <b>{part.nama}</b>
                       </td>
                       <td className="num" data-l="Harga">
@@ -318,12 +313,12 @@ export default function PartsPage() {
                       <td className="num" data-l="Stok">
                         <span className="part-value part-value-stock">{part.stok}</span>
                       </td>
-                      <td data-l="Batas minimum">{part.batas_minimum}</td>
+                      <td className="ta-c" data-l="Batas minimum">{part.batas_minimum}</td>
                       <td data-l="Status">
                         <span className={statusClass}>{statusLabel}</span>
                       </td>
                       {isAdmin && (
-                        <td data-l="Aksi">
+                        <td className="ac" data-l="Aksi">
                           <div className="acts">
                             <button
                               className="b b-g sm"
