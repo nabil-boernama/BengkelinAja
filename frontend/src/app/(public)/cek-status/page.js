@@ -119,12 +119,12 @@ export default function CekStatusPage() {
       <PageBackground />
       <main className="pub">
         <section className="pn" style={{ width: "100%", maxWidth: 520 }}>
-          <h1
-            className="font-display"
-            style={{ fontSize: "clamp(34px, 4.4vw, 52px)", lineHeight: 1.05 }}
-          >
-            Cek Status Servis
-          </h1>
+          <img
+            src="/logo.png"
+            alt="BengkelinAja"
+            style={{ height: 46, marginBottom: 24 }}
+          />
+          <h1 className="pt">Cek Status Servis</h1>
           <p className="muted" style={{ margin: "10px 0 24px" }}>
             Masukkan nomor antrean dan plat nomor yang diberikan bengkel.
           </p>
