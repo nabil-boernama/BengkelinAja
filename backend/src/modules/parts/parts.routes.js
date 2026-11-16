@@ -4,7 +4,7 @@ const controller = require('./parts.controller');
 const validate = require('../../middleware/validate');
 const { createPartSchema, updatePartSchema, objectIdParamSchema } = require('./parts.validation');
 
-router.get('/', authenticate, authorize('Admin', 'Owner'), controller.list);
+router.get('/', authenticate, authorize('Admin', 'Mekanik', 'Owner'), controller.list); // Mekanik & Owner: hanya lihat
 router.post('/', authenticate, authorize('Admin'), validate(createPartSchema), controller.create);
 router.patch('/:id', authenticate, authorize('Admin'), validate(objectIdParamSchema, 'params'), validate(updatePartSchema), controller.update);
 router.delete('/:id', authenticate, authorize('Admin'), validate(objectIdParamSchema, 'params'), controller.remove);

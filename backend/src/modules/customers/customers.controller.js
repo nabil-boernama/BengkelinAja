@@ -3,6 +3,7 @@ const Order = require('../../models/Order');
 const OrderItem = require('../../models/OrderItem');
 const AppError = require('../../utils/AppError');
 const asyncHandler = require('../../utils/asyncHandler');
+const { ROLES } = require('../../constants');
 
 // GET /customers?q= — cari lewat nama atau nomor WhatsApp (mendukung FR-02, FR-06)
 const search = asyncHandler(async (req, res) => {
@@ -17,7 +18,41 @@ const search = asyncHandler(async (req, res) => {
     : {};
 
   const customers = await Customer.find(filter).sort({ nama: 1 }).limit(20);
-  res.json({ success: true, data: customers });
+  const latestOrders = customers.length
+    ? await Order.aggregate([
+        { $match: { customer: { $in: customers.map((customer) => customer._id) } } },
+        { $sort: { tanggal: -1, no_antrean: -1 } },
+        { $group: { _id: '$customer', plat: { $first: '$plat' } } },
+      ])
+    : [];
+  const latestPlateByCustomer = new Map(
+    latestOrders.map((order) => [String(order._id), order.plat])
+  );
+  const data = customers.map((customer) => ({
+    ...customer.toObject(),
+    plat_terakhir: latestPlateByCustomer.get(String(customer._id)) || '',
+  }));
+  res.json({ success: true, data });
+});
+
+// GET /customers/plates?q= — daftar plat terdaftar untuk pencarian riwayat.
+const plates = asyncHandler(async (req, res) => {
+  const prefix = String(req.query.q || '').replace(/\s+/g, '').toUpperCase();
+  const filter = {};
+  if (prefix) {
+    const escapedPrefix = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    filter.plat = { $regex: `^${escapedPrefix}` };
+  }
+  if (req.user.peran === ROLES.MEKANIK) filter.mekanik = req.user._id;
+
+  const data = await Order.aggregate([
+    { $match: filter },
+    { $group: { _id: '$plat', latest: { $max: '$tanggal' } } },
+    { $sort: { latest: -1, _id: 1 } },
+    { $limit: 100 },
+    { $project: { _id: 0, plat: '$_id' } },
+  ]);
+  res.json({ success: true, data });
 });
 
 // GET /customers/:id/orders — riwayat servis satu pelanggan, termasuk rincian suku cadang (FR-06)
@@ -74,4 +109,4 @@ const update = asyncHandler(async (req, res) => {
   res.json({ success: true, data: customer });
 });
 
-module.exports = { search, orders, update };
+module.exports = { search, plates, orders, update };

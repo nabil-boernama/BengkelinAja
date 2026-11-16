@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
+const connectDB = require("./config/db");
 const routes = require("./routes");
 const { notFound, errorHandler } = require("./middleware/errorHandler");
 
@@ -30,7 +31,14 @@ if (process.env.NODE_ENV !== "test") app.use(morgan("dev"));
 app.get("/health", (req, res) =>
   res.json({ success: true, data: { status: "ok" } }),
 );
-app.use("/api", routes);
+app.use("/api", async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    next(err);
+  }
+}, routes);
 
 app.use(notFound);
 app.use(errorHandler);

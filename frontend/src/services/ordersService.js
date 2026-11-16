@@ -3,8 +3,8 @@ import { api } from "@/lib/apiClient";
 const enc = encodeURIComponent;
 
 // GET /orders?status=&plat= (Admin, Mekanik, Owner). Mekanik hanya menerima order miliknya.
-export function listOrders({ status, plat } = {}) {
-  return api.get("/orders", { query: { status, plat } });
+export function listOrders({ status, plat, tanggal, aktif } = {}) {
+  return api.get("/orders", { query: { status, plat, tanggal, aktif: aktif ? "1" : undefined } });
 }
 
 // GET /orders/:id
@@ -13,12 +13,13 @@ export function getOrder(id) {
 }
 
 // POST /orders (Admin)
-// payload: { customer: { id } | { nama, no_wa? }, plat, keluhan, mekanik }
+// payload: { customer: { id } | { nama, no_wa }, plat, keluhan, mekanik }
 export function createOrder(payload) {
   return api.post("/orders", payload);
 }
 
-// PATCH /orders/:id (Admin). payload: { plat?, keluhan?, mekanik? }
+// PATCH /orders/:id (Admin), hanya saat Antre/Diperiksa/Dikerjakan.
+// payload: { customer?: { nama?, no_wa? }, plat?, keluhan?, mekanik? }
 export function updateOrder(id, payload) {
   return api.patch(`/orders/${enc(id)}`, payload);
 }
@@ -29,8 +30,8 @@ export function updateOrderStatus(id, status) {
 }
 
 // PUT /orders/:id/service (Admin). items: [{ part, jumlah }]
-export function recordService(id, { items = [], biaya_jasa }) {
-  return api.put(`/orders/${enc(id)}/service`, { items, biaya_jasa });
+export function recordService(id, { items = [], biaya_jasa, deskripsi_jasa }) {
+  return api.put(`/orders/${enc(id)}/service`, { items, biaya_jasa, deskripsi_jasa });
 }
 
 // POST /orders/:id/cancel (Admin), hanya untuk status Antre atau Diperiksa
@@ -48,10 +49,15 @@ export function getNotifyLink(id) {
   return api.get(`/orders/${enc(id)}/notify-link`);
 }
 
-// GET /orders/:id/receipt (Admin), hanya untuk status Diambil -> Blob PDF
+// GET /orders/:id/receipt (Admin), status Selesai/Diambil -> Blob PDF
 export async function getReceiptPdf(id) {
   const res = await api.get(`/orders/${enc(id)}/receipt`, { raw: true });
   return res.blob();
+}
+
+// POST /orders/:id/receipt/send-whatsapp (Admin, order berstatus Selesai)
+export function sendReceiptToWhatsApp(id) {
+  return api.post(`/orders/${enc(id)}/receipt/send-whatsapp`, {});
 }
 
 // GET /mechanics/workload (Admin) -> [{ id, nama, order_aktif }]

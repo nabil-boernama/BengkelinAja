@@ -6,9 +6,10 @@ import StaffLayout from "@/components/layout/StaffLayout";
 import StatusMarker from "@/components/ui/StatusMarker";
 import { useAuth } from "@/context/AuthContext";
 import usePolling from "@/hooks/usePolling";
+import useRealtimeOrders from "@/hooks/useRealtimeOrders";
 import useDebounce from "@/hooks/useDebounce";
 import { getOrders } from "@/lib/services/orderService";
-import { formatTanggalPendek } from "@/lib/format";
+import { formatPlat, formatTanggalPendek } from "@/lib/format";
 import { STATUS_LIST } from "@/lib/constants";
 
 const POLL_MS = 30000;
@@ -33,22 +34,36 @@ function SkeletonRows({ cols, count = 5 }) {
   ));
 }
 
+// Tombol X yang sama untuk filter plat dan tanggal (pengganti X bawaan browser yang tidak konsisten)
+function ClearButton({ label, onClick }) {
+  return (
+    <button type="button" className="in-clr-x" aria-label={label} onClick={onClick}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+        <path d="M6 6l12 12M18 6L6 18" />
+      </svg>
+    </button>
+  );
+}
+
 function OrdersContent() {
   const { role } = useAuth();
   const showMekanik = role !== "mekanik"; // mekanik hanya melihat order miliknya sendiri
 
   const [status, setStatus] = useState("");
   const [platInput, setPlatInput] = useState("");
-  const plat = useDebounce(platInput.trim(), 400);
+  const [tanggalInput, setTanggalInput] = useState("");
+  const tanggal = useDebounce(tanggalInput, 400);
+  const plat = useDebounce(platInput.trim().toUpperCase(), 400);
 
   const fetcher = useCallback(async () => {
-    const items = await getOrders({ status, plat });
+    const items = await getOrders({ status, plat, tanggal, aktif: true });
     return { items: Array.isArray(items) ? items : [], at: new Date() };
-  }, [status, plat]);
+  }, [status, plat, tanggal]);
   const { data, error, loading, refresh } = usePolling(fetcher, POLL_MS);
+  useRealtimeOrders(refresh, { enabled: Boolean(role) });
 
   const orders = data?.items ?? [];
-  const hasFilter = Boolean(status || plat);
+  const hasFilter = Boolean(status || plat || tanggal);
   const cols = showMekanik ? 8 : 7;
 
   let body;
@@ -58,13 +73,13 @@ function OrdersContent() {
     body = null; // gagal pada muatan pertama: pesan error tampil di atas tabel
   } else {
     body = orders.map((o) => (
-      <tr key={o._id}>
+      <tr key={o._id} data-status={o.status ?? ""}>
         <td className="num" data-l="No">
           #{o.no_antrean ?? "-"}
         </td>
         <td data-l="Tanggal">{formatTanggalPendek(o.tanggal)}</td>
         <td data-l="Plat">
-          <b>{o.plat || "-"}</b>
+          <b>{formatPlat(o.plat)}</b>
         </td>
         <td data-l="Pelanggan">{o.customer?.nama || "-"}</td>
         <td className="trunc" data-l="Keluhan" title={o.keluhan}>
@@ -105,25 +120,30 @@ function OrdersContent() {
             </button>
           ))}
         </div>
-        <input
-          className="in"
-          type="search"
-          placeholder="Cari plat nomor"
-          aria-label="Cari plat nomor"
-          autoCapitalize="characters"
-          autoCorrect="off"
-          spellCheck={false}
-          maxLength={15}
-          value={platInput}
-          onChange={(e) => setPlatInput(e.target.value)}
-        />
-        <div className="stamp">
-          {data?.at && <span>Diperbarui {jamFmt.format(data.at).replace(/:/g, ".")}</span>}
-          <button type="button" className="ib" onClick={refresh} aria-label="Muat ulang">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M20 12a8 8 0 1 1-2.5-5.8M20 4v5h-5" />
-            </svg>
-          </button>
+        <div className="in-clr">
+          <input
+            className="in"
+            type="search"
+            placeholder="Cari plat nomor"
+            aria-label="Cari plat nomor"
+            autoCapitalize="characters"
+            autoCorrect="off"
+            spellCheck={false}
+            maxLength={15}
+            value={platInput}
+            onChange={(e) => setPlatInput(e.target.value)}
+          />
+          {platInput && <ClearButton label="Hapus pencarian plat" onClick={() => setPlatInput("")} />}
+        </div>
+        <div className="in-clr in-clr-date">
+          <input
+            className="in"
+            type="date"
+            aria-label="Filter tanggal"
+            value={tanggalInput}
+            onChange={(e) => setTanggalInput(e.target.value)}
+          />
+          {tanggalInput && <ClearButton label="Hapus filter tanggal" onClick={() => setTanggalInput("")} />}
         </div>
       </div>
 

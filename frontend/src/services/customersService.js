@@ -7,6 +7,11 @@ export function searchCustomers(q) {
   return api.get("/customers", { query: { q: q?.trim() } });
 }
 
+// GET /customers/plates?q= (plat terdaftar, hasil unik dan dikelompokkan)
+export function searchCustomerPlates(q) {
+  return api.get("/customers/plates", { query: { q: q?.trim() } });
+}
+
 // GET /customers/:id/orders -> { customer, orders }
 export function getCustomerOrders(id) {
   return api.get(`/customers/${enc(id)}/orders`);

@@ -4,17 +4,18 @@ import Link from "next/link";
 import { useEffect } from "react";
 import ScrollTopOnLoad from "@/components/landing/ScrollTopOnLoad";
 import ServicesCarousel from "@/components/landing/ServicesCarousel";
+import LeafletMap from "@/components/landing/LeafletMap";
 
 const WA_URL = "https://wa.me/6281371846810";
 
 const LAYANAN = [
   ["Ganti Aki", "ganti-aki.jpg"],
+  ["Ganti Oli", "ganti-oli.jpg"],
   ["Servis Berkala", "servis-berkala.jpg"],
   ["Servis CVT dan Transmisi", "servis-cvt-dan-transmisi.jpg"],
   ["Servis Kelistrikan", "servis-kelistrikan.jpg"],
   ["Servis Mesin", "servis-mesin.jpg"],
   ["Servis Rem", "servis-rem.jpg"],
-  ["Servis Suspensi", "servis-suspensi.jpg"],
   ["Tune Up Motor", "tune-up-motor.jpg"],
 ];
 
@@ -285,12 +286,7 @@ export default function LandingPage() {
                 </a>
               </div>
               <div className="cm reveal reveal-delay-2">
-                <div className="mapbg" />
-                <iframe
-                  title="Peta lokasi Fakultas Teknik UGM"
-                  loading="lazy"
-                  src="https://www.openstreetmap.org/export/embed.html?bbox=110.3700%2C-7.7695%2C110.3780%2C-7.7625&layer=mapnik&marker=-7.7660%2C110.3740"
-                />
+                <LeafletMap />
                 <a
                   className="mi"
                   href="https://www.google.com/maps/search/?api=1&query=Fakultas+Teknik+Universitas+Gadjah+Mada"

@@ -1,0 +1,213 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import StaffLayout from "@/components/layout/StaffLayout";
+import { getDashboard, REPORT_PERIODS } from "@/services/reportsService";
+import { formatRupiah } from "@/lib/format";
+
+const PERIOD_LABELS = {
+  daily: "Harian",
+  weekly: "Mingguan",
+  monthly: "Bulanan",
+};
+
+function getErrorMessage(error) {
+  return error?.message || "Laporan gagal dimuat. Coba lagi.";
+}
+
+export default function DashboardPage() {
+  const [period, setPeriod] = useState("monthly");
+  const [report, setReport] = useState(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getDashboard(period)
+      .then((data) => {
+        if (
+          !data ||
+          typeof data.total_pendapatan !== "number" ||
+          typeof data.total_order !== "number" ||
+          !Array.isArray(data.order_aktif_per_status) ||
+          !Array.isArray(data.stok_menipis)
+        ) {
+          throw new Error("Data laporan dari server tidak sesuai.");
+        }
+        if (!cancelled) {
+          setReport(data);
+          setError("");
+        }
+      })
+      .catch((requestError) => {
+        if (!cancelled) setError(getErrorMessage(requestError));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [period, refreshKey]);
+
+  function selectPeriod(nextPeriod) {
+    if (nextPeriod === period) return;
+    setPeriod(nextPeriod);
+    setReport(null);
+    setLoading(true);
+    setError("");
+  }
+
+  function refreshReport() {
+    setLoading(true);
+    setError("");
+    setRefreshKey((current) => current + 1);
+  }
+
+  const activeOrders = report?.order_aktif_per_status ?? [];
+  const maxActiveOrders = Math.max(...activeOrders.map((item) => item.total), 1);
+
+  const content = (
+    <div>
+      <div className="row sp" style={{ marginBottom: 24 }}>
+        <h1
+          className="font-display"
+          style={{ fontSize: "clamp(32px, 4vw, 48px)", lineHeight: 1.1 }}
+        >
+          Dashboard
+        </h1>
+        <div className="row">
+          <div className="seg" aria-label="Periode laporan">
+            {REPORT_PERIODS.map((item) => (
+              <button
+                key={item}
+                className={period === item ? "on" : ""}
+                type="button"
+                aria-pressed={period === item}
+                onClick={() => selectPeriod(item)}
+              >
+                {PERIOD_LABELS[item]}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {error && (
+        <div className="ermsg on" role="alert" style={{ marginBottom: 16 }}>
+          <span>{error}</span>
+        </div>
+      )}
+
+      <div
+        className="cards"
+        style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}
+        aria-live="polite"
+      >
+        <section className="cc">
+          <p className="muted small">Total Pendapatan</p>
+          {loading && !report ? (
+            <div className="sk" style={{ height: 48, marginTop: 8 }} />
+          ) : (
+            <p style={{ fontSize: "clamp(34px, 5vw, 56px)", fontWeight: 800 }}>
+              {report ? formatRupiah(report.total_pendapatan) : "-"}
+            </p>
+          )}
+        </section>
+        <section className="cc">
+          <p className="muted small">Order Selesai Diambil</p>
+          {loading && !report ? (
+            <div className="sk" style={{ height: 48, marginTop: 8 }} />
+          ) : (
+            <p style={{ fontSize: "clamp(34px, 5vw, 56px)", fontWeight: 800 }}>
+              {report ? report.total_order : "-"}
+            </p>
+          )}
+        </section>
+      </div>
+
+      <p className="muted small" style={{ margin: "16px 0 24px" }}>
+        Dihitung dari order berstatus Diambil pada periode ini, berdasarkan waktu
+        WIB. Minggu dimulai hari Minggu.
+      </p>
+
+      <div
+        className="cards"
+        style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}
+      >
+        <section className="pn">
+          <h2>Stok Menipis</h2>
+          {loading && !report ? (
+            <p className="muted" role="status">
+              Memuat data stok...
+            </p>
+          ) : report?.stok_menipis.length ? (
+            <div className="cards" style={{ gap: 12 }}>
+              {report.stok_menipis.map((part) => (
+                <div className="cc stock-low-row" key={part._id || part.id}>
+                  <span>
+                    <b>{part.nama}</b>
+                    <br />
+                    <span className="muted small">
+                      stok {part.stok}, batas {part.batas_minimum}
+                    </span>
+                  </span>
+                  <span className="lowst">MENIPIS</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="muted">Tidak ada suku cadang yang menipis.</p>
+          )}
+          <Link className="b b-g sm" style={{ marginTop: 14 }} href="/parts">
+            Lihat semua stok
+          </Link>
+        </section>
+
+        <section className="pn">
+          <h2>Order Aktif per Status</h2>
+          {loading && !report ? (
+            <p className="muted" role="status">Memuat data order...</p>
+          ) : report ? (
+            activeOrders.length > 0 ? (
+              <div className="cards" style={{ gap: 14 }}>
+                {activeOrders.map((item) => (
+                  <div
+                    className="row"
+                    key={item.status}
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "100px minmax(40px, 1fr) 32px",
+                      gap: 12,
+                      fontWeight: 700,
+                    }}
+                  >
+                    <span>{item.status}</span>
+                    <span
+                      className="sk"
+                      style={{
+                        height: 18,
+                        width: `${(item.total / maxActiveOrders) * 100}%`,
+                      }}
+                    />
+                    <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+                      {item.total}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="muted">Tidak ada order aktif.</p>
+            )
+          ) : null}
+        </section>
+      </div>
+    </div>
+  );
+
+  return <StaffLayout>{content}</StaffLayout>;
+}

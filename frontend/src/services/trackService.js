@@ -8,3 +8,13 @@ export function trackOrder(noAntrean, plat) {
     query: { no_antrean: noAntrean, plat: plat?.trim() },
   });
 }
+
+// GET /orders/receipt/lookup?no_antrean=&plat= (publik, setelah servis selesai)
+export async function getTrackReceiptPdf(noAntrean, plat) {
+  const response = await api.get("/orders/receipt/lookup", {
+    auth: false,
+    raw: true,
+    query: { no_antrean: noAntrean, plat: plat?.trim() },
+  });
+  return response.blob();
+}

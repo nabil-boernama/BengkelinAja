@@ -24,7 +24,9 @@ const orderSchema = new Schema(
       default: ORDER_STATUS.ANTRE,
     },
     biaya_jasa: { type: Number, default: 0, min: 0 },
-    
+    // Deskripsi jasa servis yang dikerjakan, mis. "ganti oli, cek rem"
+    deskripsi_jasa: { type: String, trim: true, maxlength: 500, default: '' },
+
     // Diisi saat order dibatalkan (hanya lewat endpoint cancel)
     alasan_batal: { type: String, trim: true, maxlength: 300 },
     dibatalkan_pada: { type: Date },

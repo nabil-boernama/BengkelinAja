@@ -1,5 +1,5 @@
 // Semua route backend berada di bawah prefix /api
-const BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api").replace(/\/+$/, "");
+export const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api").replace(/\/+$/, "");
 const TOKEN_KEY = "ba_token";
 const USER_KEY = "ba_user";
 
@@ -74,10 +74,12 @@ async function request(path, { method = "GET", body, query, auth = true, raw = f
 
   let res;
   try {
-    res = await fetch(`${BASE_URL}${path}${buildQuery(query)}`, {
+    res = await fetch(`${API_BASE_URL}${path}${buildQuery(query)}`, {
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
+      // selalu ambil data terbaru: jangan pakai respons dari cache HTTP browser
+      cache: "no-store",
     });
   } catch {
     throw new ApiError("Tidak dapat terhubung ke server. Periksa koneksi Anda.", 0);

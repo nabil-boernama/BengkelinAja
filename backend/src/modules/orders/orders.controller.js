@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const { Order, Customer, Part, OrderItem, OrderStatusLog, Counter, User } = require('../../models');
 const AppError = require('../../utils/AppError');
 const asyncHandler = require('../../utils/asyncHandler');
+const { publishOrderChanged } = require('../../utils/realtime');
 const { ROLES, ORDER_STATUS } = require('../../constants');
 const { dateKey } = require('../../utils/date');
 
@@ -15,6 +16,9 @@ const MEKANIK_SEQUENCE = [
 
 // Status akhir: order tidak boleh diubah lagi
 const FINAL_STATUS = [ORDER_STATUS.DIAMBIL, ORDER_STATUS.DIBATALKAN];
+
+// Status yang masih boleh diubah datanya (pelanggan, plat, keluhan, mekanik)
+const EDITABLE_STATUS = [ORDER_STATUS.ANTRE, ORDER_STATUS.DIPERIKSA, ORDER_STATUS.DIKERJAKAN];
 
 // Sembunyikan sebagian nomor WA untuk Mekanik.
 // Contoh: "08123456789" -> "0812****89"
@@ -36,11 +40,32 @@ const create = asyncHandler(async (req, res) => {
   if (customerInput.id) {
     customer = await Customer.findById(customerInput.id);
     if (!customer) throw new AppError('Pelanggan tidak ditemukan', 404);
+    const digits = String(customer.no_wa || '').replace(/\D/g, '');
+    if (digits.length < 8 || digits.length > 13) {
+      throw new AppError(
+        'Nomor WhatsApp pelanggan harus berisi 8 sampai 13 digit. Perbarui data pelanggan terlebih dahulu.',
+        400
+      );
+    }
   } else {
-    // Pelanggan baru: cek dulu berdasarkan no_wa (NFR-07: no_wa unik) sebelum membuat baru
-    customer = customerInput.no_wa ? await Customer.findOne({ no_wa: customerInput.no_wa }) : null;
-    if (!customer) {
-      customer = await Customer.create({ nama: customerInput.nama, no_wa: customerInput.no_wa });
+    const digits = customerInput.no_wa.replace(/\D/g, '');
+    const formattedPhonePattern = new RegExp(
+      `^\\+?${digits.split('').join('[\\s-]*')}$`
+    );
+    const duplicate = await Customer.exists({
+      no_wa: { $regex: formattedPhonePattern },
+    });
+    if (duplicate) {
+      throw new AppError('Nomor WhatsApp sudah terdaftar. Pilih pelanggan lama.', 409);
+    }
+
+    try {
+      customer = await Customer.create({ nama: customerInput.nama, no_wa: digits });
+    } catch (err) {
+      if (err.code === 11000) {
+        throw new AppError('Nomor WhatsApp sudah terdaftar. Pilih pelanggan lama.', 409);
+      }
+      throw err;
     }
   }
 
@@ -70,16 +95,26 @@ const create = asyncHandler(async (req, res) => {
 
   await order.populate([{ path: 'customer' }, { path: 'mekanik', select: 'nama' }]);
 
+  await publishOrderChanged();
   res.status(201).json({ success: true, data: order });
 });
 
 // GET /orders?status=&plat=: daftar order (FR-12). Mekanik hanya lihat order miliknya.
 const list = asyncHandler(async (req, res) => {
-  const { status, plat } = req.query;
+  const { status, plat, tanggal, aktif } = req.query;
   const filter = {};
   if (status) filter.status = status;
-  if (plat) filter.plat = String(plat).replace(/\s+/g, '').toUpperCase();
+  if (plat) filter.plat = { $regex: String(plat).replace(/\s+/g, ''), $options: 'i' };
+  if (tanggal) filter.tanggal_key = tanggal;
   if (req.user.peran === ROLES.MEKANIK) filter.mekanik = req.user._id;
+  // Order aktif: status belum final (kapan pun), atau sudah Diambil/Dibatalkan tapi masih hari ini.
+  // Order final dari hari sebelumnya hanya bisa diakses lewat riwayat pelanggan.
+  if (aktif === '1') {
+    filter.$or = [
+      { status: { $nin: [ORDER_STATUS.DIAMBIL, ORDER_STATUS.DIBATALKAN] } },
+      { tanggal_key: dateKey() },
+    ];
+  }
 
   const orders = await Order.find(filter)
     .sort({ tanggal_key: -1, no_antrean: -1 })
@@ -173,17 +208,18 @@ const updateStatus = asyncHandler(async (req, res) => {
     diubah_oleh: req.user._id,
   });
 
+  await publishOrderChanged();
   res.json({ success: true, data: order });
 });
 
-// PUT /orders/:id/service: catat/ubah suku cadang + biaya jasa (FR-04).
+// PUT /orders/:id/service: catat/ubah suku cadang + biaya jasa + deskripsi jasa (FR-04).
 // NFR-06: pencatatan suku cadang & pengurangan stok dalam satu transaksi atomik.
 // Body berisi daftar LENGKAP suku cadang yang dipakai (bukan tambahan); endpoint ini
 // menghitung selisih bersih dengan data lama lalu menyesuaikan stok.
 // Boleh selama order belum Diambil atau Dibatalkan (termasuk saat Selesai, untuk koreksi).
 // Harga satuan baris yang sudah tercatat dipertahankan; baris baru memakai harga saat ini.
 const recordService = asyncHandler(async (req, res) => {
-  const { items, biaya_jasa } = req.body;
+  const { items, biaya_jasa, deskripsi_jasa } = req.body;
   const orderId = req.params.id;
 
   const session = await mongoose.startSession();
@@ -243,6 +279,7 @@ const recordService = asyncHandler(async (req, res) => {
       }
 
       order.biaya_jasa = biaya_jasa;
+      if (deskripsi_jasa !== undefined) order.deskripsi_jasa = deskripsi_jasa;
       await order.save({ session });
       result = order;
     });
@@ -250,37 +287,72 @@ const recordService = asyncHandler(async (req, res) => {
     session.endSession();
   }
 
+  await publishOrderChanged();
   res.json({ success: true, data: result });
 });
 
-// PATCH /orders/:id: ubah detail order (plat, keluhan, mekanik). Admin saja.
-// Tidak boleh saat Diambil atau Dibatalkan; mekanik tidak boleh diganti saat Selesai.
+// PATCH /orders/:id: ubah detail order (pelanggan, no WA, plat, keluhan, mekanik). Admin saja.
+// Hanya selama order masih Antre, Diperiksa, atau Dikerjakan. Setelah Selesai, Diambil,
+// atau Dibatalkan, data order hanya bisa dilihat.
+// Nama & no WA disimpan di dokumen Customer, jadi perubahannya berlaku untuk semua order
+// milik pelanggan tersebut. Order dan pelanggan diubah dalam satu transaksi.
 const updateDetails = asyncHandler(async (req, res) => {
-  const { plat, keluhan, mekanik: mekanikId } = req.body;
+  const { customer: customerInput, plat, keluhan, mekanik: mekanikId } = req.body;
 
-  const order = await Order.findById(req.params.id);
-  if (!order) throw new AppError('Order tidak ditemukan', 404);
+  const session = await mongoose.startSession();
+  let result;
+  try {
+    await session.withTransaction(async () => {
+      const order = await Order.findById(req.params.id).session(session);
+      if (!order) throw new AppError('Order tidak ditemukan', 404);
 
-  if (FINAL_STATUS.includes(order.status)) {
-    throw new AppError('Order yang sudah diambil atau dibatalkan tidak bisa diubah', 400);
+      if (!EDITABLE_STATUS.includes(order.status)) {
+        throw new AppError(
+          'Order yang sudah Selesai, Diambil, atau Dibatalkan tidak bisa diubah',
+          400
+        );
+      }
+
+      if (customerInput && (customerInput.nama !== undefined || customerInput.no_wa !== undefined)) {
+        const customer = await Customer.findById(order.customer).session(session);
+        if (!customer) throw new AppError('Pelanggan tidak ditemukan', 404);
+        if (customerInput.nama !== undefined) customer.nama = customerInput.nama;
+        if (customerInput.no_wa !== undefined) {
+          customer.no_wa = customerInput.no_wa === '' ? undefined : customerInput.no_wa;
+        }
+        try {
+          await customer.save({ session });
+        } catch (err) {
+          if (err.code === 11000) {
+            throw new AppError('Nomor WhatsApp sudah dipakai pelanggan lain', 409);
+          }
+          throw err;
+        }
+      }
+
+      if (mekanikId !== undefined && String(mekanikId) !== String(order.mekanik)) {
+        const mekanik = await User.findOne({
+          _id: mekanikId,
+          peran: ROLES.MEKANIK,
+          aktif: true,
+        }).session(session);
+        if (!mekanik) throw new AppError('Mekanik tidak ditemukan atau tidak aktif', 400);
+        order.mekanik = mekanik._id;
+      }
+
+      if (plat !== undefined) order.plat = plat; // dinormalisasi oleh setter di model
+      if (keluhan !== undefined) order.keluhan = keluhan;
+
+      await order.save({ session });
+      result = order;
+    });
+  } finally {
+    session.endSession();
   }
 
-  if (mekanikId !== undefined && String(mekanikId) !== String(order.mekanik)) {
-    if (order.status === ORDER_STATUS.SELESAI) {
-      throw new AppError('Mekanik tidak bisa diganti setelah order selesai', 400);
-    }
-    const mekanik = await User.findOne({ _id: mekanikId, peran: ROLES.MEKANIK, aktif: true });
-    if (!mekanik) throw new AppError('Mekanik tidak ditemukan atau tidak aktif', 400);
-    order.mekanik = mekanik._id;
-  }
-
-  if (plat !== undefined) order.plat = plat; // dinormalisasi oleh setter di model
-  if (keluhan !== undefined) order.keluhan = keluhan;
-
-  await order.save();
-  await order.populate([{ path: 'customer' }, { path: 'mekanik', select: 'nama' }]);
-
-  res.json({ success: true, data: order });
+  await result.populate([{ path: 'customer' }, { path: 'mekanik', select: 'nama' }]);
+  await publishOrderChanged();
+  res.json({ success: true, data: result });
 });
 
 // POST /orders/:id/cancel: batalkan order (hanya Antre atau Diperiksa). Admin saja.
@@ -328,6 +400,7 @@ const cancel = asyncHandler(async (req, res) => {
     session.endSession();
   }
 
+  await publishOrderChanged();
   res.json({ success: true, data: result });
 });
 
@@ -353,6 +426,7 @@ const revert = asyncHandler(async (req, res) => {
 
   await order.populate([{ path: 'customer' }, { path: 'mekanik', select: 'nama' }]);
 
+  await publishOrderChanged();
   res.json({ success: true, data: order });
 });
 
