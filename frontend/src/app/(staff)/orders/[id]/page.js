@@ -102,8 +102,8 @@ function Rincian({ order }) {
       {items.length === 0 ? (
         <p className="muted">Belum ada rincian suku cadang.</p>
       ) : (
-        <div className="tw">
-          <table>
+        <div className="tw" style={{overflowX:'auto', WebkitOverflowScrolling:'touch'}}>
+          <table style={{minWidth:440}}>
             <thead>
               <tr>
                 <th>Suku cadang</th>
@@ -784,7 +784,7 @@ function OrderDetailContent() {
           </div>
         </div>
         <div className="pn alt" style={{ background: "#161C1F" }}>
-          <h2>Rincian</h2>
+          <h2>Rincian Servis</h2>
           <Rincian order={order} />
         </div>
       </div>
@@ -803,14 +803,14 @@ function OrderDetailContent() {
 
       <div className="row" style={{ marginTop: 24 }}>
         {role === "admin" && RECEIPT_AVAILABLE_STATUSES.includes(status) && (
-          <button type="button" className="b b-r" onClick={handlePrintReceipt} disabled={printing}>
+          <button type="button" className="b b-ol" onClick={handlePrintReceipt} disabled={printing}>
             {printing ? "Menyiapkan Struk..." : "Cetak Struk"}
           </button>
         )}
         {role === "admin" && status === "Selesai" && (
           <button
             type="button"
-            className="b b-g"
+            className="b b-wa"
             onClick={handleSendReceipt}
             disabled={sendingReceipt}
           >

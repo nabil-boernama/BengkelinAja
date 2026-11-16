@@ -94,25 +94,6 @@ export default function DashboardPage() {
               </button>
             ))}
           </div>
-          <button
-            className="ib"
-            type="button"
-            onClick={refreshReport}
-            disabled={loading}
-            aria-label="Muat ulang laporan"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M20 12a8 8 0 1 1-2.5-5.8M20 4v5h-5" />
-            </svg>
-          </button>
         </div>
       </div>
 

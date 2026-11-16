@@ -210,6 +210,7 @@ function StaffContent() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
+  const [query, setQuery] = useState("");
   const [formTarget, setFormTarget] = useState(null); // null = tertutup, "new" = tambah, objek = edit
   const [toggleTarget, setToggleTarget] = useState(null);
   const [toggling, setToggling] = useState(false);
@@ -272,6 +273,10 @@ function StaffContent() {
     }
   }
 
+  const q = query.trim().toLowerCase();
+  const filteredStaff = q === "" ? staff : staff.filter((s) =>
+    [s.nama, s.username, s.peran].some((v) => String(v || "").toLowerCase().includes(q))
+  );
   const aktifCount = staff.filter((s) => s.aktif).length;
 
   return (
@@ -286,13 +291,23 @@ function StaffContent() {
           )}
         </div>
         <div className="row">
-          <button type="button" className="b b-g sm" onClick={load} disabled={loading}>
-            Muat ulang
-          </button>
           <button type="button" className="b b-r" onClick={() => setFormTarget("new")}>
             Tambah Staf
           </button>
         </div>
+      </div>
+
+      <div style={{ maxWidth: 420, marginBottom: 20 }}>
+        <label className="fld" htmlFor="cari-staf">
+          <span>Cari staf</span>
+          <input
+            className="in"
+            id="cari-staf"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Nama, username, atau peran"
+          />
+        </label>
       </div>
 
       {loadError && (
@@ -318,7 +333,7 @@ function StaffContent() {
               {loading && !loaded ? (
                 <SkeletonRows cols={5} />
               ) : (
-                staff.map((s) => (
+                filteredStaff.map((s) => (
                   <tr key={s._id}>
                     <td data-l="Nama">
                       <b>{s.nama}</b>
@@ -353,9 +368,9 @@ function StaffContent() {
               )}
             </tbody>
           </table>
-          {loaded && staff.length === 0 && (
+          {loaded && filteredStaff.length === 0 && (
             <p className="muted" style={{ padding: "24px 14px" }}>
-              Belum ada staf.
+              {staff.length === 0 ? "Belum ada staf." : "Tidak ada staf yang cocok."}
             </p>
           )}
         </div>
