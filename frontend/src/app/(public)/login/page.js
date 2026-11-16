@@ -113,7 +113,7 @@ export default function LoginPage() {
           <img src="/logo.png" alt="BengkelinAja" style={{ height: 46, marginBottom: 24 }} />
           <h1 className="pt">Masuk Staf</h1>
           <p className="muted" style={{ margin: "10px 0 24px" }}>
-            Khusus untuk Admin, Mekanik, dan Owner Bengkel Laju Jaya.
+            Khusus untuk Admin, Mekanik, dan Owner BengkelinAja.
           </p>
 
           {busyText ? (
