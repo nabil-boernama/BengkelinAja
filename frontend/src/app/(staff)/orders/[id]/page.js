@@ -801,48 +801,52 @@ function OrderDetailContent() {
         />
       )}
 
-      <div className="row" style={{ marginTop: 24 }}>
-        {role === "admin" && RECEIPT_AVAILABLE_STATUSES.includes(status) && (
-          <button type="button" className="b b-ol" onClick={handlePrintReceipt} disabled={printing}>
-            {printing ? "Menyiapkan Struk..." : "Cetak Struk"}
-          </button>
-        )}
-        {role === "admin" && status === "Selesai" && (
-          <button
-            type="button"
-            className="b b-wa"
-            onClick={handleSendReceipt}
-            disabled={sendingReceipt}
-          >
-            {sendingReceipt ? "Mengirim Pesan..." : "Kirim Struk Teks ke WhatsApp"}
-          </button>
-        )}
-        {role === "admin" && EDIT_ALLOWED.includes(status) && (
-          <button type="button" className="b b-g" onClick={() => setEditOpen(true)}>
-            Ubah Data Order
-          </button>
-        )}
-        {options.length > 0 && (
-          <button type="button" className="b b-r" onClick={openDialog}>
-            Ubah Status
-          </button>
-        )}
-        {role === "admin" && CANCEL_ALLOWED.includes(status) && (
-          <button
-            type="button"
-            className="b b-g"
-            onClick={() => {
-              setAlasan("");
-              setCancelError("");
-              setCancelOpen(true);
-            }}
-          >
-            Batalkan Order
-          </button>
-        )}
-        <Link className="b b-g" href="/orders">
-          Kembali
-        </Link>
+      <div className="order-acts" style={{ marginTop: 24 }}>
+        <div className="order-acts-primary">
+          {role === "admin" && EDIT_ALLOWED.includes(status) && (
+            <button type="button" className="b b-g" onClick={() => setEditOpen(true)}>
+              Ubah Data Order
+            </button>
+          )}
+          {options.length > 0 && (
+            <button type="button" className="b b-r" onClick={openDialog}>
+              Ubah Status
+            </button>
+          )}
+          {role === "admin" && CANCEL_ALLOWED.includes(status) && (
+            <button
+              type="button"
+              className="b b-g"
+              onClick={() => {
+                setAlasan("");
+                setCancelError("");
+                setCancelOpen(true);
+              }}
+            >
+              Batalkan Order
+            </button>
+          )}
+          <Link className="b b-g" href="/orders">
+            Kembali
+          </Link>
+        </div>
+        <div className="order-acts-receipt">
+          {role === "admin" && RECEIPT_AVAILABLE_STATUSES.includes(status) && (
+            <button type="button" className="b b-ol" onClick={handlePrintReceipt} disabled={printing}>
+              {printing ? "Menyiapkan Struk..." : "Cetak Struk"}
+            </button>
+          )}
+          {role === "admin" && status === "Selesai" && (
+            <button
+              type="button"
+              className="b b-wa"
+              onClick={handleSendReceipt}
+              disabled={sendingReceipt}
+            >
+              {sendingReceipt ? "Mengirim Pesan..." : "Kirim Struk Teks ke WhatsApp"}
+            </button>
+          )}
+        </div>
       </div>
 
       {role === "mekanik" && MEKANIK_NEXT[status] && (
