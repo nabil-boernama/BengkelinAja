@@ -209,9 +209,6 @@ export default function PartsPage() {
           Stok Suku Cadang
         </h1>
         <div className="row">
-          <button className="b b-g sm" type="button" onClick={handleRefresh} disabled={loading}>
-            Muat ulang
-          </button>
           {isAdmin && (
             <button className="b b-p" type="button" onClick={openAddDialog}>
               Tambah Suku Cadang

@@ -6,7 +6,7 @@
 @font-face{font-family:"Russo One";font-weight:400;src:url(fonts/russo-one-latin-400-normal.woff2) format("woff2")}
 :root{--ink:#090B0C;--nb:#0E1112;--char:#222;--s8:#283237;--s7:#323C40;--red:#D52B27;--mist:#B8C2C7;--paper:#F3F4F5;--lime:#b8d44a}
 *{box-sizing:border-box;margin:0}html{scroll-behavior:smooth}
-body{background:var(--ink);color:#fff;font-family:"Plus Jakarta Sans",system-ui,sans-serif;line-height:1.6;overflow-x:hidden}
+body{background:var(--ink);color:#fff;font-family:"Poppins",system-ui,sans-serif;line-height:1.6;overflow-x:hidden}
 a{color:inherit;text-decoration:none}img{display:block}
 .ct{max-width:1320px;margin:0 auto;padding:0 32px}
 /* nav */

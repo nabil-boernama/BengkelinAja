@@ -143,14 +143,6 @@ function OrdersContent() {
           />
           {tanggalInput && <ClearButton label="Hapus filter tanggal" onClick={() => setTanggalInput("")} />}
         </div>
-        <div className="stamp">
-          {data?.at && <span>Diperbarui {jamFmt.format(data.at).replace(/:/g, ".")}</span>}
-          <button type="button" className="ib" onClick={refresh} aria-label="Muat ulang">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M20 12a8 8 0 1 1-2.5-5.8M20 4v5h-5" />
-            </svg>
-          </button>
-        </div>
       </div>
 
       {error && (

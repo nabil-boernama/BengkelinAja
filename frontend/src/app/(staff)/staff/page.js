@@ -286,9 +286,6 @@ function StaffContent() {
           )}
         </div>
         <div className="row">
-          <button type="button" className="b b-g sm" onClick={load} disabled={loading}>
-            Muat ulang
-          </button>
           <button type="button" className="b b-r" onClick={() => setFormTarget("new")}>
             Tambah Staf
           </button>
