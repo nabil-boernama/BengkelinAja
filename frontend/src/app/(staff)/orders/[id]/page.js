@@ -10,6 +10,7 @@ import Dialog from "@/components/ui/Dialog";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/components/ui/Toast";
 import usePolling from "@/hooks/usePolling";
+import useRealtimeOrders from "@/hooks/useRealtimeOrders";
 import { getOrderById, updateOrderStatus } from "@/lib/services/orderService";
 import {
   recordService,
@@ -597,6 +598,7 @@ function OrderDetailContent() {
 
   const fetcher = useCallback(() => getOrderById(id), [id]);
   const { data: order, error, loading, refresh } = usePolling(fetcher, POLL_MS);
+  useRealtimeOrders(refresh, { enabled: Boolean(role) });
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [target, setTarget] = useState("");

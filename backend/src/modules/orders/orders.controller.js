@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const { Order, Customer, Part, OrderItem, OrderStatusLog, Counter, User } = require('../../models');
 const AppError = require('../../utils/AppError');
 const asyncHandler = require('../../utils/asyncHandler');
+const { publishOrderChanged } = require('../../utils/realtime');
 const { ROLES, ORDER_STATUS } = require('../../constants');
 const { dateKey } = require('../../utils/date');
 
@@ -94,6 +95,7 @@ const create = asyncHandler(async (req, res) => {
 
   await order.populate([{ path: 'customer' }, { path: 'mekanik', select: 'nama' }]);
 
+  await publishOrderChanged();
   res.status(201).json({ success: true, data: order });
 });
 
@@ -206,6 +208,7 @@ const updateStatus = asyncHandler(async (req, res) => {
     diubah_oleh: req.user._id,
   });
 
+  await publishOrderChanged();
   res.json({ success: true, data: order });
 });
 
@@ -284,6 +287,7 @@ const recordService = asyncHandler(async (req, res) => {
     session.endSession();
   }
 
+  await publishOrderChanged();
   res.json({ success: true, data: result });
 });
 
@@ -347,6 +351,7 @@ const updateDetails = asyncHandler(async (req, res) => {
   }
 
   await result.populate([{ path: 'customer' }, { path: 'mekanik', select: 'nama' }]);
+  await publishOrderChanged();
   res.json({ success: true, data: result });
 });
 
@@ -395,6 +400,7 @@ const cancel = asyncHandler(async (req, res) => {
     session.endSession();
   }
 
+  await publishOrderChanged();
   res.json({ success: true, data: result });
 });
 
@@ -420,6 +426,7 @@ const revert = asyncHandler(async (req, res) => {
 
   await order.populate([{ path: 'customer' }, { path: 'mekanik', select: 'nama' }]);
 
+  await publishOrderChanged();
   res.json({ success: true, data: order });
 });
 

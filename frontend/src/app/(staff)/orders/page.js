@@ -6,6 +6,7 @@ import StaffLayout from "@/components/layout/StaffLayout";
 import StatusMarker from "@/components/ui/StatusMarker";
 import { useAuth } from "@/context/AuthContext";
 import usePolling from "@/hooks/usePolling";
+import useRealtimeOrders from "@/hooks/useRealtimeOrders";
 import useDebounce from "@/hooks/useDebounce";
 import { getOrders } from "@/lib/services/orderService";
 import { formatPlat, formatTanggalPendek } from "@/lib/format";
@@ -59,6 +60,7 @@ function OrdersContent() {
     return { items: Array.isArray(items) ? items : [], at: new Date() };
   }, [status, plat, tanggal]);
   const { data, error, loading, refresh } = usePolling(fetcher, POLL_MS);
+  useRealtimeOrders(refresh, { enabled: Boolean(role) });
 
   const orders = data?.items ?? [];
   const hasFilter = Boolean(status || plat || tanggal);

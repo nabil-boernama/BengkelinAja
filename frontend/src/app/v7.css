@@ -95,9 +95,10 @@ a{color:inherit;text-decoration:none}img{display:block}
 .ci{width:56px;height:56px;flex:0 0 auto;border-radius:50%;background:#fff;color:var(--ink);display:grid;place-items:center}.ci svg{width:26px;height:26px}
 .ch b{display:block;font-size:20px}.ch em{font-style:normal;color:var(--mist);font-size:18px}
 .cm{position:relative;border-radius:36px;overflow:hidden;min-height:640px;background:#d9dddf}
-.mapbg{position:absolute;inset:0;background:linear-gradient(28deg,transparent 46%,rgba(255,255,255,.7) 46.4% 47.4%,transparent 47.8%),linear-gradient(-14deg,transparent 60%,rgba(255,255,255,.7) 60.3% 61.3%,transparent 61.6%),repeating-linear-gradient(90deg,transparent 0 78px,rgba(120,130,135,.28) 78px 80px),repeating-linear-gradient(0deg,transparent 0 62px,rgba(120,130,135,.28) 62px 64px),linear-gradient(120deg,#e4e7e8,#cfd4d6)}
-.cm iframe{position:absolute;inset:0;width:100%;height:100%;border:0;filter:grayscale(1) contrast(.95)}
-.mi{position:absolute;left:24px;right:24px;bottom:34px;background:var(--ink);border-radius:28px;padding:24px 30px}.mi b{display:block;font-size:19px}.mi span{color:var(--mist);font-size:17px}
+.cm .leaflet-map{position:absolute;inset:0;width:100%;height:100%;filter:grayscale(1) contrast(.95)}
+.cm .leaflet-container{font-family:inherit}
+.map-error{position:absolute;z-index:500;top:16px;left:16px;right:16px;background:var(--ink);border-radius:12px;padding:12px;color:#fff}
+.mi{position:absolute;z-index:500;left:24px;right:24px;bottom:34px;background:var(--ink);border-radius:28px;padding:24px 30px}.mi b{display:block;font-size:19px}.mi span{color:var(--mist);font-size:17px}
 .foot{position:relative;z-index:2;padding:56px 0 40px;border-top:1px solid rgba(255,255,255,.08)}
 .foot .ct{display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap}.foot img{height:34px}.foot nav{display:flex;gap:24px;color:var(--mist);font-size:14px}.foot p{color:var(--mist);font-size:13px;width:100%;text-align:center;margin-top:20px}
 /* jam operasional strip */
