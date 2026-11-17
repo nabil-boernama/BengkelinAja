@@ -1,5 +1,8 @@
 const router = require('express').Router();
 const PDFDocument = require('pdfkit');
+// PDFKit loads these fonts lazily, so require them explicitly for serverless file tracing.
+require('pdfkit/standard-fonts/Helvetica');
+require('pdfkit/standard-fonts/HelveticaBold');
 const rateLimit = require('express-rate-limit');
 
 const {
