@@ -177,3 +177,13 @@ a{color:inherit;text-decoration:none}img{display:block}
 .hin .lead    { animation: fadeInUp 0.7s ease both; animation-delay: 0.25s; }
 .hin .hbtn    { animation: fadeInUp 0.7s ease both; animation-delay: 0.4s; }
 .hin .strip   { animation: fadeInUp 0.7s ease both; animation-delay: 0.55s; }
+
+/* Filter tanggal (Daftar Order): label "Filter Tanggal" saat kosong, karena iOS Safari
+   menampilkan input date kosong tanpa teks apa pun. Teks bawaan browser (dd/mm/yyyy)
+   disembunyikan saat kosong agar tampilan sama di desktop dan mobile. */
+.in-clr.in-clr-date .in{-webkit-appearance:none;appearance:none;text-align:left;line-height:normal}
+.in-clr.in-clr-date .in::-webkit-date-and-time-value{text-align:left}
+.in-clr.in-clr-date .in.in-date-empty:not(:focus){color:transparent}
+.in-clr.in-clr-date .in.in-date-empty:not(:focus)::-webkit-datetime-edit{color:transparent}
+.in-clr.in-clr-date .in-date-ph{position:absolute;left:20px;right:52px;top:50%;transform:translateY(-50%);color:#7C8990;font-size:16px;pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.in-clr.in-clr-date .in:focus + .in-date-ph{display:none}
