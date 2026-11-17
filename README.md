@@ -22,7 +22,6 @@ Proyek Akhir mata kuliah Pengembangan Aplikasi Web (TIF213146), DTETI FT UGM.
 | Bintang Khalifa Hadianto | 24/534951/TK/59312 | Suku cadang dan laporan | Landing page (`/`), Daftar Order (`/orders`), Detail Order (`/orders/[id]`) |
 | Putri Tajudin (Puput) | 24/535824/TK/59469 | Struk, notifikasi, dan fitur publik | Halaman publik, Cek Status (`/cek-status`), Login (`/login`), halaman 403/404, Stok Suku Cadang (`/parts`), Dashboard Owner (`/dashboard`) |
 
-Halaman Kelola Staf (`/staff`) merupakan fitur tambahan.
 
 ## Struktur Folder
 
@@ -84,8 +83,7 @@ BengkelinAja/
 
 ### Routes Frontend
 
-Frontend memakai Next.js App Router. Folder route group `(public)` dan `(staff)` adalah
-pengelompokan source dan tidak muncul di URL.
+Frontend memakai Next.js App Router.
 
 | Route | Halaman | Akses |
 |---|---|---|
