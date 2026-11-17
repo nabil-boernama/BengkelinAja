@@ -177,3 +177,29 @@ a{color:inherit;text-decoration:none}img{display:block}
 .hin .lead    { animation: fadeInUp 0.7s ease both; animation-delay: 0.25s; }
 .hin .hbtn    { animation: fadeInUp 0.7s ease both; animation-delay: 0.4s; }
 .hin .strip   { animation: fadeInUp 0.7s ease both; animation-delay: 0.55s; }
+
+/* Filter tanggal (Daftar Order): label "Filter Tanggal" saat kosong, karena iOS Safari
+   menampilkan input date kosong tanpa teks apa pun. Teks bawaan browser (dd/mm/yyyy)
+   disembunyikan saat kosong agar tampilan sama di desktop dan mobile. */
+.in-clr.in-clr-date .in{-webkit-appearance:none;appearance:none;text-align:left;line-height:normal}
+.in-clr.in-clr-date .in::-webkit-date-and-time-value{text-align:left}
+.in-clr.in-clr-date .in.in-date-empty:not(:focus){color:transparent}
+.in-clr.in-clr-date .in.in-date-empty:not(:focus)::-webkit-datetime-edit{color:transparent}
+.in-clr.in-clr-date .in-date-ph{position:absolute;left:20px;right:52px;top:50%;transform:translateY(-50%);color:#7C8990;font-size:16px;pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.in-clr.in-clr-date .in:focus + .in-date-ph{display:none}
+
+/* Filter bertipe tanggal (semua halaman): di mobile (iOS Safari/Android) input date punya
+   lebar intrinsik sendiri dan tidak mengikuti lebar container, sehingga tombol X (.in-clr-x)
+   yang diposisikan terhadap container jatuh di luar kotak rounded. Paksa input mengisi
+   container, beri lebar minimum untuk teks tanggal + tombol X, dan di perangkat sentuh
+   (tanpa ikon kalender bawaan) geser X rata kanan seperti input pencarian. */
+.in-clr.in-clr-date,.in-clr:has(> input[type="date"]){min-width:200px;flex:0 1 260px}
+.in-clr.in-clr-date .in,.in-clr > input[type="date"]{display:block;flex:1 1 auto;width:100%;min-width:0;max-width:none;padding-right:52px}
+.in-clr.in-clr-date .in::-webkit-date-and-time-value,.in-clr > input[type="date"]::-webkit-date-and-time-value{min-height:1.4em}
+.in-clr:has(> input[type="date"]) .in-clr-x{right:44px}
+@media (hover:none) and (pointer:coarse){
+  .in-clr.in-clr-date .in-clr-x,.in-clr:has(> input[type="date"]) .in-clr-x{right:14px}
+}
+@media (max-width:600px){
+  .in-clr.in-clr-date,.in-clr:has(> input[type="date"]){flex:1 1 100%;max-width:none}
+}

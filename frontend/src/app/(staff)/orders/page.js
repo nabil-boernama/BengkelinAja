@@ -137,12 +137,18 @@ function OrdersContent() {
         </div>
         <div className="in-clr in-clr-date">
           <input
-            className="in"
+            className={tanggalInput ? "in" : "in in-date-empty"}
             type="date"
             aria-label="Filter tanggal"
             value={tanggalInput}
             onChange={(e) => setTanggalInput(e.target.value)}
           />
+          {/* iOS Safari tidak menampilkan placeholder untuk input date kosong */}
+          {!tanggalInput && (
+            <span className="in-date-ph" aria-hidden="true">
+              Filter Tanggal
+            </span>
+          )}
           {tanggalInput && <ClearButton label="Hapus filter tanggal" onClick={() => setTanggalInput("")} />}
         </div>
       </div>
