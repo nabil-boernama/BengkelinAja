@@ -13,6 +13,13 @@ Cek: `GET http://localhost:3000/health`
 > Termudah: MongoDB Atlas (free tier) dan tempel connection string-nya di `MONGODB_URI`.
 > Lokal: jalankan `mongod --replSet rs0`, lalu sekali di mongosh: `rs.initiate()`.
 
+## Data contoh suku cadang
+Untuk menambahkan 46 item suku cadang contoh ke database yang ditunjuk `MONGODB_URI`, jalankan:
+```bash
+npm run seed:parts
+```
+Seeder hanya menambahkan item yang namanya belum ada; data item yang sudah ada tidak diubah saat dijalankan ulang. Data ini bersifat dummy untuk demo, bukan catatan stok atau harga aktual. Pastikan `MONGODB_URI` menunjuk ke database demo yang benar sebelum menjalankannya.
+
 ## Realtime dengan Pusher Channels
 Isi `PUSHER_APP_ID`, `PUSHER_KEY`, `PUSHER_SECRET`, dan `PUSHER_CLUSTER` dari aplikasi Pusher Channels. Isi `NEXT_PUBLIC_PUSHER_KEY` dan `NEXT_PUBLIC_PUSHER_CLUSTER` di frontend dengan key dan cluster yang sama. Jangan pernah mengirim `PUSHER_SECRET` ke frontend. Jika Pusher belum dikonfigurasi, halaman order tetap bekerja dengan polling berkala.
 
