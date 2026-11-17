@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import StaffLayout from "@/components/layout/StaffLayout";
 import { createPart, deletePart, listParts, updatePart } from "@/services/partsService";
+import NumberInput from "@/components/ui/NumberInput";
+import { formatRupiahInput, parseRupiah } from "@/lib/currency";
 
 const RUPIAH = new Intl.NumberFormat("id-ID", {
   style: "currency",
@@ -97,9 +99,9 @@ export default function PartsPage() {
     setSelectedPart(part);
     setForm({
       nama: part.nama,
-      harga: String(part.harga),
-      stok: String(part.stok),
-      batas_minimum: String(part.batas_minimum),
+      harga: formatRupiahInput(part.harga),
+      stok: formatRupiahInput(part.stok),
+      batas_minimum: formatRupiahInput(part.batas_minimum),
     });
     setActionError("");
     setNotice("");
@@ -125,9 +127,9 @@ export default function PartsPage() {
 
     const payload = {
       nama: form.nama.trim(),
-      harga: Number(form.harga),
-      stok: Number(form.stok),
-      batas_minimum: Number(form.batas_minimum),
+      harga: parseRupiah(form.harga),
+      stok: parseRupiah(form.stok),
+      batas_minimum: parseRupiah(form.batas_minimum),
     };
 
     const numbersValid =
@@ -372,42 +374,31 @@ export default function PartsPage() {
               </label>
               <label className="fld" htmlFor="part-price">
                 <span>Harga (Rp)</span>
-                <input
+                <NumberInput
                   className="in"
                   id="part-price"
-                  type="number"
-                  min="0"
-                  step="1"
                   value={form.harga}
-                  onChange={(event) => setForm({ ...form, harga: event.target.value })}
+                  onChange={(value) => setForm((prev) => ({ ...prev, harga: value }))}
                   required
                 />
               </label>
               <label className="fld" htmlFor="part-stock">
                 <span>{selectedPart ? "Stok" : "Stok awal"}</span>
-                <input
+                <NumberInput
                   className="in"
                   id="part-stock"
-                  type="number"
-                  min="0"
-                  step="1"
                   value={form.stok}
-                  onChange={(event) => setForm({ ...form, stok: event.target.value })}
+                  onChange={(value) => setForm((prev) => ({ ...prev, stok: value }))}
                   required
                 />
               </label>
               <label className="fld" htmlFor="part-minimum">
                 <span>Batas minimum</span>
-                <input
+                <NumberInput
                   className="in"
                   id="part-minimum"
-                  type="number"
-                  min="0"
-                  step="1"
                   value={form.batas_minimum}
-                  onChange={(event) =>
-                    setForm({ ...form, batas_minimum: event.target.value })
-                  }
+                  onChange={(value) => setForm((prev) => ({ ...prev, batas_minimum: value }))}
                   required
                 />
                 <span className="help">
