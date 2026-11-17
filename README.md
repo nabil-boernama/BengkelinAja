@@ -139,5 +139,4 @@ Semua endpoint API kecuali login, `/track`, dan `/orders/receipt/lookup` memerlu
 | GET | `/orders/receipt/lookup?no_antrean=&plat=` | Cari dan tampilkan struk PDF | Publik; order Selesai/Diambil |
 | GET | `/orders/:id/receipt` | Tampilkan struk PDF | Admin; order Selesai/Diambil |
 | POST | `/orders/:id/receipt/send-whatsapp` | Kirim pesan struk melalui Fonnte | Admin; order Selesai |
-| GET | `/orders/:id/notify-link` | Buat tautan WhatsApp untuk notifikasi status | Admin, Mekanik |
 | GET | `/track?no_antrean=&plat=` | Cek status servis tanpa login | Publik |
