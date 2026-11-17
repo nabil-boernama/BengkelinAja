@@ -58,7 +58,7 @@ BengkelinAja/
         └── services/            # Pemanggilan API untuk fitur frontend
 ```
 
-## Teknologi yang Digunakan
+## Tech Stacks
 
 | Teknologi | Penggunaan |
 |---|---|
