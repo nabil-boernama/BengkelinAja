@@ -12,6 +12,19 @@ Proyek Akhir mata kuliah Pengembangan Aplikasi Web (TIF213146), DTETI FT UGM.
 ##### [Folder Laporan BengkelinAja](https://drive.google.com/drive/folders/1BVq1ukSe8JshY3xhNFIL0UMRkIr1My79?usp=share_link)
 
 ---
+## Akun Demo untuk Penilaian
+
+Akun berikut disediakan agar dapat login ke
+[BengkelinAja](https://bengkel-laju-jaya.vercel.app) dan mencoba fitur sesuai peran masing-masing.
+
+| Peran | Username | Password |
+|---|---|---|
+| Owner | `owner` | `owner123` |
+| Admin | `admin` | `admin123` |
+| Mekanik 1 | `budi` | `mekanik123` |
+| Mekanik 2 | `andi` | `mekanik123` |
+
+---
 
 ## Anggota Kelompok
 
